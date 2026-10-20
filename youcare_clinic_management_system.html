@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Youcare - Clinic Customer & Appointment Management System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        bgSoft: '#f4f6fb',
+                        cardBg: '#ffffff'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Font Inter -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for Reports -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6fb;
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, minmax(130px, 1fr));
+        }
+        /* Custom Pill Active Animation */
+        .tab-pill {
+            transition: all 0.2s ease-in-out;
+        }
+        /* Glass card styling */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-bgSoft min-h-screen text-slate-800 flex flex-col">
+
+    <!-- TOP NAVBAR -->
+    <header class="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
+            <div class="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                <i data-lucide="flower-2" class="w-6 h-6"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-900">Youcare</span>
+        </div>
+
+        <!-- Central Navigation Pills -->
+        <nav class="hidden md:flex items-center bg-slate-100/80 p-1.5 rounded-full border border-slate-200/60 gap-1">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Dashboard</button>
+            <button onclick="switchTab('patients')" id="nav-patients" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Patient</button>
+            <button onclick="switchTab('appointments')" id="nav-appointments" class="tab-pill px-5 py-2 rounded-full text-sm font-medium bg-brand-600 text-white shadow-sm">Appointment</button>
+            <button onclick="switchTab('reports')" id="nav-reports" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Report</button>
+            <button onclick="switchTab('inquiries')" id="nav-inquiries" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
+                Inquiries & Feedback
+                <span id="badge-inquiries" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
+            </button>
+            <button onclick="switchTab('staff')" id="nav-staff" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Staff</button>
+        </nav>
+
+        <!-- User Actions & Profile -->
+        <div class="flex items-center gap-3">
+            <button onclick="switchTab('inquiries')" class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition relative">
+                <i data-lucide="bell" class="w-4 h-4"></i>
+                <span class="absolute top-2 right-2 w-2 h-2 bg-brand-600 rounded-full"></span>
+            </button>
+            <button onclick="switchTab('staff')" class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+            </button>
+            
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" alt="User Profile" class="w-9 h-9 rounded-full object-cover border border-brand-500">
+                <div class="hidden sm:block text-left text-xs">
+                    <p class="font-semibold text-slate-800" id="current-user-name">Dr. Sarah Jenkins</p>
+                    <p class="text-slate-500" id="current-user-role">Head Admin</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE NAVIGATION (Visible on small screens) -->
+    <div class="md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-medium overflow-x-auto">
+        <button onclick="switchTab('dashboard')" class="py-1 px-3 text-slate-600">Dashboard</button>
+        <button onclick="switchTab('patients')" class="py-1 px-3 text-slate-600">Patient</button>
+        <button onclick="switchTab('appointments')" class="py-1 px-3 bg-brand-600 text-white rounded-full">Appointment</button>
+        <button onclick="switchTab('reports')" class="py-1 px-3 text-slate-600">Report</button>
+        <button onclick="switchTab('inquiries')" class="py-1 px-3 text-slate-600">Inquiries</button>
+        <button onclick="switchTab('staff')" class="py-1 px-3 text-slate-600">Staff</button>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <section id="section-appointments" class="space-y-6">
+            <!-- Top Action Toolbar -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Appointment</h1>
+                <div class="flex items-center gap-3">
+                    <button onclick="openNewAppointmentModal()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 transition">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                        <span>+ Check new</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls Bar -->
+            <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i> Filter
+                    </button>
+                    <div class="relative">
+                        <select id="calendar-view-type" class="appearance-none bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 py-1.5 pl-3 pr-8 focus:outline-none">
+                            <option>Monthly</option>
+                            <option selected>Weekly</option>
+                            <option>Daily</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-2.5 top-2 text-slate-400 pointer-events-none"></i>
+                    </div>
+                    <button onclick="exportDataCSV()" class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Data
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                        <input type="text" id="appointment-search" placeholder="Search appointment..." class="pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 w-48 sm:w-64" onkeyup="filterAppointments()">
+                    </div>
+                    <button class="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900">
+                        <i data-lucide="help-circle" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Support</span>
+                    </button>
+                    <button class="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Content Layout</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calendar Main Layout (Split View: Left Sidebar Widget + Right Interactive Schedule Grid) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Sidebar Components (3 columns) -->
+                <div class="lg:col-span-3 space-y-6">
+                    <!-- Mini Calendar Card -->
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-slate-800 text-sm">Appointment Calendar</h3>
+                            <div class="flex items-center gap-1">
+                                <button class="p-1 rounded-full hover:bg-slate-100 text-slate-500"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                <button class="p-1 rounded-full hover:bg-slate-100 text-slate-500"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Days Header -->
+                        <div class="grid grid-cols-7 text-center text-[11px] font-semibold text-slate-400">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        </div>
+                        <!-- Mini Calendar Grid -->
+                        <div class="grid grid-cols-7 text-center text-xs gap-y-2 font-medium text-slate-700">
+                            <span class="text-slate-300">29</span><span class="text-slate-300">30</span><span class="text-slate-300">31</span><span>1</span><span>2</span><span>3</span><span>4</span>
+                            <span class="w-7 h-7 flex items-center justify-center rounded-full bg-brand-600 text-white font-bold mx-auto shadow-sm">5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span>
+                            <span>12</span><span>13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span>
+                            <span>19</span><span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+                            <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span><span class="text-slate-300">1</span>
+                        </div>
+                    </div>
+
+                    <!-- Doctor Appointment List Sidebar -->
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-slate-800 text-sm">Doctor Appointment List</h3>
+                            <button class="text-slate-400 hover:text-slate-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                        </div>
+
+                        <div class="space-y-3" id="doctor-list-container">
+                            <!-- Populated via JS -->
+                        </div>
+
+                        <button onclick="switchTab('staff')" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-2xl shadow-sm transition">
+                            See All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Main Weekly Interactive Schedule Grid (9 columns) -->
+                <div class="lg:col-span-9 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 overflow-x-auto relative">
+                    <!-- Calendar Header Controls -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-4 border-b border-slate-100 gap-4">
+                        <div class="flex items-center gap-4">
+                            <h2 class="text-xl font-bold text-slate-900">Agustus 2026</h2>
+                            <span class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full border border-slate-200">Today</span>
+                            <div class="flex items-center gap-1">
+                                <button class="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                <button class="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 text-xs font-medium text-slate-500">
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span> None</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Priority</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Deadline</span>
+                            <div class="flex items-center gap-2 pl-3 border-l border-slate-200">
+                                <button class="p-1 hover:text-slate-800"><i data-lucide="video" class="w-4 h-4"></i></button>
+                                <button class="p-1 hover:text-slate-800"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Time Slots Table -->
+                    <div class="min-w-[700px]">
+                        <!-- Column Days Header -->
+                        <div class="grid grid-cols-8 text-xs font-semibold text-slate-500 text-center pb-3 border-b border-slate-100">
+                            <div class="text-slate-400">GMT+8</div>
+                            <div>MON 1</div>
+                            <div>TUE 2</div>
+                            <div class="text-brand-600 font-bold">WED 3</div>
+                            <div>THU 4</div>
+                            <div>FRI 5</div>
+                            <div>SAT 6</div>
+                            <div>SUN 7</div>
+                        </div>
+
+                        <!-- Time Rows & Event Canvas -->
+                        <div class="relative divide-y divide-slate-100 text-xs" id="interactive-schedule-grid">
+                            <!-- Time Slot: 09 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">09 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Check Health -->
+                                    <div onclick="openEditScheduleModal(1)" class="absolute left-[14%] w-[13%] top-2 bottom-2 bg-purple-50 border border-purple-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-purple-900 leading-tight">Check Health</p>
+                                        <p class="text-[10px] font-medium text-purple-600 mt-1">09 AM - 10 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Current Time Indicator Line -->
+                            <div class="absolute left-16 right-0 top-[110px] flex items-center z-10 pointer-events-none">
+                                <span class="w-3 h-3 bg-brand-600 rounded-full -ml-1.5 ring-4 ring-brand-100"></span>
+                                <div class="w-full border-t-2 border-dashed border-brand-500"></div>
+                            </div>
+
+                            <!-- Time Slot: 10 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">10 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Body Condition -->
+                                    <div onclick="openEditScheduleModal(2)" class="absolute left-[28%] w-[13%] top-2 bottom-2 bg-lime-50 border border-lime-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-lime-900 leading-tight">Body Condition</p>
+                                        <p class="text-[10px] font-medium text-lime-700 mt-1">10 AM - 11 AM</p>
+                                    </div>
+
+                                    <!-- Event Card: Check Your Teeth -->
+                                    <div onclick="openEditScheduleModal(3)" class="absolute left-[42%] w-[13%] top-2 bottom-2 bg-rose-50 border border-rose-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-rose-900 leading-tight">Check Your Teeth</p>
+                                        <p class="text-[10px] font-medium text-rose-600 mt-1">10 AM - 11 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Time Slot: 11 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">11 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Check-Up Kid -->
+                                    <div onclick="openEditScheduleModal(4)" class="absolute left-[28%] w-[13%] -top-20 h-20 bg-amber-50 border border-amber-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-amber-900 leading-tight">Check-Up Kid</p>
+                                        <p class="text-[10px] font-medium text-amber-700 mt-1">08 AM - 09 AM</p>
+                                    </div>
+
+                                    <!-- Event Card: Heart Check-Up -->
+                                    <div onclick="openEditScheduleModal(5)" class="absolute left-[28%] w-[13%] top-2 bottom-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-emerald-900 leading-tight">Heart Check-Up</p>
+                                        <p class="text-[10px] font-medium text-emerald-700 mt-1">08 AM - 10 AM</p>
+                                    </div>
+
+                                    <!-- Selected Event Card: Physical Control Health (Active Blue Pill style matching mockup) -->
+                                    <div onclick="openEditScheduleModal(6)" class="absolute left-[42%] w-[13%] -top-16 h-36 bg-brand-600 border border-brand-500 rounded-2xl p-3 text-white cursor-pointer shadow-lg shadow-brand-500/30 z-20 hover:bg-brand-700 transition flex flex-col justify-between">
+                                        <div>
+                                            <p class="font-bold leading-tight">Physical Control..</p>
+                                            <p class="text-[10px] text-brand-100 mt-1">09 AM - 11 AM</p>
+                                        </div>
+                                        <div class="flex justify-end">
+                                            <i data-lucide="mouse-pointer" class="w-4 h-4 fill-white text-white"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Time Slot: 12 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">12 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Check-Up Kid 2 -->
+                                    <div onclick="openEditScheduleModal(7)" class="absolute left-[28%] w-[13%] top-2 bottom-2 bg-lime-50 border border-lime-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-lime-900 leading-tight">Check-Up Kid</p>
+                                        <p class="text-[10px] font-medium text-lime-700 mt-1">12 AM - 13 AM</p>
+                                    </div>
+
+                                    <!-- Event Card: Check-Up -->
+                                    <div onclick="openEditScheduleModal(8)" class="absolute left-[70%] w-[13%] top-2 bottom-2 bg-purple-50 border border-purple-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-purple-900 leading-tight">Check-Up</p>
+                                        <p class="text-[10px] font-medium text-purple-700 mt-1">12 AM - 13 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Interactive Popover Modal Mockup (Matching standard Edit Schedule UI from Screenshot) -->
+                    <div id="edit-schedule-popover" class="hidden absolute right-12 top-28 w-80 bg-white rounded-3xl border border-slate-200 p-5 shadow-2xl z-30 space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <h4 class="font-bold text-slate-800 text-sm">Edit Schedule</h4>
+                            <button onclick="closeEditScheduleModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <input type="text" id="modal-appointment-title" value="Physical Control Health" class="w-full font-semibold text-slate-800 text-sm border-b border-slate-200 pb-1 focus:outline-none focus:border-brand-600">
+                                <p class="text-xs text-slate-400 mt-1">Add Description</p>
+                            </div>
+
+                            <div class="flex items-center gap-2 text-xs text-slate-600 pt-1">
+                                <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+                                <span id="modal-appointment-time" class="font-medium">09:00 AM &rarr; 11:00 AM</span>
+                                <button class="ml-auto text-slate-400 hover:text-slate-600"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                            </div>
+
+                            <div class="space-y-1 pt-1">
+                                <div class="flex items-center gap-2 text-xs text-slate-600">
+                                    <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                                    <span class="font-medium">Add Guests / Patient</span>
+                                </div>
+                                <div class="flex items-center gap-2 pl-6">
+                                    <div class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold text-[10px] flex items-center justify-center">E</div>
+                                    <span class="text-xs text-slate-500" id="modal-patient-name">1 Going, 1 Awaiting</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 pt-2">
+                            <button onclick="closeEditScheduleModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+                            <button onclick="saveEditSchedule()" class="px-5 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-dashboard" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Welcome Back, Sarah!</h1>
+                    <p class="text-slate-500 text-sm">Here is today's overview for Youcare Clinic.</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-medium text-slate-400">System Status</span>
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Operational
+                    </span>
+                </div>
+            </div>
+
+            <!-- Metric Cards Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Total Appointments</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1">128</h3>
+                        <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i> +12% from last week</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
+                        <i data-lucide="calendar" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Active Patients</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1">1,420</h3>
+                        <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i> +8 new today</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Pending Inquiries</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1">14</h3>
+                        <p class="text-[11px] text-amber-600 font-semibold mt-1 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> Requires response</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <i data-lucide="message-square" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Satisfaction Rate</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1">98.4%</h3>
+                        <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1"><i data-lucide="smile" class="w-3.5 h-3.5"></i> High performance</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <i data-lucide="heart-pulse" class="w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Visual Highlights -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Schedule Summary -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 text-base">Weekly Patient Traffic</h3>
+                        <span class="text-xs text-slate-400">Updated 10 mins ago</span>
+                    </div>
+                    <div class="h-64 flex items-center justify-center border border-dashed border-slate-200 rounded-2xl">
+                        <canvas id="dashboardChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Activities Stream -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-800 text-base">Recent Activity Logs</h3>
+                    <div class="space-y-4" id="recent-activity-stream">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-patients" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Patient Directory</h1>
+                    <p class="text-slate-500 text-sm">Manage patient records, medical histories, and contact info.</p>
+                </div>
+                <button onclick="openAddPatientModal()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 text-xs">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Add New Patient
+                </button>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div class="relative w-72">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+                        <input type="text" id="patient-search-input" onkeyup="renderPatientsTable()" placeholder="Search by name, email, or phone..." class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider">
+                            <tr>
+                                <th class="p-4">Patient Name</th>
+                                <th class="p-4">Contact Info</th>
+                                <th class="p-4">Age / Gender</th>
+                                <th class="p-4">Blood Group</th>
+                                <th class="p-4">Last Visit</th>
+                                <th class="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100" id="patients-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-inquiries" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Inquiries & Feedback</h1>
+                    <p class="text-slate-500 text-sm">Review questions, complaints, and patient satisfaction notes.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left: Patient Questions & Inquiries -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-5 h-5 text-brand-600"></i> Patient Inquiries
+                        </h3>
+                        <span class="px-2.5 py-1 bg-brand-50 text-brand-700 rounded-full font-bold text-xs" id="inquiry-count">0 Open</span>
+                    </div>
+
+                    <div class="space-y-4" id="inquiry-list-container">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+
+                <!-- Right: Complaints & Feedback Resolutions -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i data-lucide="alert-circle" class="w-5 h-5 text-rose-500"></i> Concerns & Complaints
+                        </h3>
+                        <span class="px-2.5 py-1 bg-rose-50 text-rose-700 rounded-full font-bold text-xs" id="concern-count">0 Pending</span>
+                    </div>
+
+                    <div class="space-y-4" id="feedback-list-container">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-staff" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Staff & Practitioner Management</h1>
+                    <p class="text-slate-500 text-sm">Manage doctor schedules, roles, and system user privileges.</p>
+                </div>
+                <button onclick="openAddStaffModal()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 text-xs">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Staff Account
+                </button>
+            </div>
+
+            <!-- Staff Grid Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="staff-grid-container">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </section>
+
+        <section id="section-reports" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
+                    <p class="text-slate-500 text-sm">Comprehensive performance metrics and appointment service trends.</p>
+                </div>
+                <button onclick="exportDataCSV()" class="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-2xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Full Report
+                </button>
+            </div>
+
+            <!-- Analytics Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Frequently Requested Services Chart -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-800 text-base">Frequently Requested Services</h3>
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="servicesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Appointment Status Breakdown -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-800 text-base">Appointment Resolution Rate</h3>
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: Book New Appointment Modal -->
+    <div id="modal-book-appointment" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg">Book New Appointment</h3>
+                <button onclick="closeModal('modal-book-appointment')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form onsubmit="handleBookAppointment(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Select Patient</label>
+                    <select id="book-patient-select" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <!-- Dynamic options -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Assigned Doctor</label>
+                        <select id="book-doctor-select" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <!-- Dynamic options -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Service Type</label>
+                        <select id="book-service-type" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Check-Up</option>
+                            <option>Heart Check-Up</option>
+                            <option>Pediatric Control</option>
+                            <option>Dental Consultation</option>
+                            <option>Dermatology Care</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Date</label>
+                        <input type="date" id="book-date" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Time Slot</label>
+                        <select id="book-time" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>08:00 AM - 09:00 AM</option>
+                            <option>09:00 AM - 10:00 AM</option>
+                            <option>10:00 AM - 11:00 AM</option>
+                            <option>11:00 AM - 12:00 PM</option>
+                            <option>01:00 PM - 02:00 PM</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Notes / Special Instructions</label>
+                    <textarea id="book-notes" rows="3" placeholder="Enter reason for visit or patient history..." class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-book-appointment')" class="px-4 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Confirm Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Add New Patient Modal -->
+    <div id="modal-add-patient" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg">Add New Patient Record</h3>
+                <button onclick="closeModal('modal-add-patient')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form onsubmit="handleAddPatient(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Full Name</label>
+                    <input type="text" id="patient-name" required placeholder="e.g. Eleanor Vance" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Email</label>
+                        <input type="email" id="patient-email" required placeholder="patient@example.com" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Phone</label>
+                        <input type="tel" id="patient-phone" required placeholder="+1 (555) 000-0000" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Age</label>
+                        <input type="number" id="patient-age" required placeholder="28" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Gender</label>
+                        <select id="patient-gender" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none">
+                            <option>Female</option>
+                            <option>Male</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Blood Group</label>
+                        <select id="patient-blood" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none">
+                            <option>O+</option>
+                            <option>A+</option>
+                            <option>B+</option>
+                            <option>AB+</option>
+                            <option>O-</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-add-patient')" class="px-4 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION BANNER -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-semibold pointer-events-none">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toast-message">Action saved successfully!</span>
+    </div>
+
+    <script>
+        // --- 1. INITIAL MOCK DATA STATE ---
+        const initialDoctors = [
+            { id: 1, name: 'Dr. Emily Johnson', specialty: 'Pediatrician', time: '10:00 - 11:00', avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=150' },
+            { id: 2, name: 'Dr. Michael Lee', specialty: 'Dermatologist', time: '11:00 - 12:00', avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=150' },
+            { id: 3, name: 'Dr. Sophia Martinez', specialty: 'Cardiologist', time: '01:00 - 02:00', avatar: 'https://images.unsplash.com/photo-1594824813566-88855ce78907?auto=format&fit=crop&q=80&w=150' }
+        ];
+
+        const initialPatients = [
+            { id: 101, name: 'Lucas Scott', email: 'lucas.s@example.com', phone: '+1 (555) 234-5678', age: 8, gender: 'Male', blood: 'O+', lastVisit: '2026-08-03', avatar: 'https://images.unsplash.com/photo-1543610892-0b1f7e6d8ac1?auto=format&fit=crop&q=80&w=150' },
+            { id: 102, name: 'Amanda Clarke', email: 'amanda.c@example.com', phone: '+1 (555) 876-5432', age: 34, gender: 'Female', blood: 'A+', lastVisit: '2026-08-01', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150' },
+            { id: 103, name: 'David Miller', email: 'david.m@example.com', phone: '+1 (555) 345-6789', age: 45, gender: 'Male', blood: 'B+', lastVisit: '2026-07-28', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150' }
+        ];
+
+        const initialInquiries = [
+            { id: 1, patient: 'Amanda Clarke', question: 'Should I fast prior to the blood test scheduled for tomorrow morning?', status: 'Pending', time: '10 mins ago' },
+            { id: 2, patient: 'David Miller', question: 'Can I reschedule my cardiology follow-up to next Monday?', status: 'Responded', time: '1 hour ago' }
+        ];
+
+        const initialFeedback = [
+            { id: 1, patient: 'Rachel Green', type: 'Complaint', issue: 'Wait time exceeded 30 minutes at reception.', status: 'Under Review', rating: 2 },
+            { id: 2, patient: 'David Miller', type: 'Feedback', issue: 'Excellent pediatric consultation by Dr. Emily!', status: 'Resolved', rating: 5 }
+        ];
+
+        const initialActivities = [
+            { user: 'Dr. Emily Johnson', action: 'Completed appointment with Lucas Scott', time: '25 mins ago' },
+            { user: 'Sarah Jenkins', action: 'Booked new consultation for David Miller', time: '1 hour ago' },
+            { user: 'Dr. Michael Lee', action: 'Updated prescriptions for Amanda Clarke', time: '2 hours ago' }
+        ];
+
+        // LocalStorage Initialization
+        let appData = {
+            doctors: JSON.parse(localStorage.getItem('youcare_doctors')) || initialDoctors,
+            patients: JSON.parse(localStorage.getItem('youcare_patients')) || initialPatients,
+            inquiries: JSON.parse(localStorage.getItem('youcare_inquiries')) || initialInquiries,
+            feedback: JSON.parse(localStorage.getItem('youcare_feedback')) || initialFeedback,
+            activities: JSON.parse(localStorage.getItem('youcare_activities')) || initialActivities
+        };
+
+        function saveData() {
+            localStorage.setItem('youcare_doctors', JSON.stringify(appData.doctors));
+            localStorage.setItem('youcare_patients', JSON.stringify(appData.patients));
+            localStorage.setItem('youcare_inquiries', JSON.stringify(appData.inquiries));
+            localStorage.setItem('youcare_feedback', JSON.stringify(appData.feedback));
+            localStorage.setItem('youcare_activities', JSON.stringify(appData.activities));
+        }
+
+        // --- 2. NAVIGATION & TAB SWITCHING ---
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'patients', 'appointments', 'reports', 'inquiries', 'staff'];
+            
+            tabs.forEach(tab => {
+                const sec = document.getElementById(`section-${tab}`);
+                const nav = document.getElementById(`nav-${tab}`);
+                if (sec) sec.classList.add('hidden');
+                if (nav) {
+                    nav.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
+                    nav.classList.add('text-slate-600');
+                }
+            });
+
+            const activeSec = document.getElementById(`section-${tabId}`);
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            
+            if (activeSec) activeSec.classList.remove('hidden');
+            if (activeNav) {
+                activeNav.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
+                activeNav.classList.remove('text-slate-600');
+            }
+
+            // Re-render components when entering specific tabs
+            if (tabId === 'patients') renderPatientsTable();
+            if (tabId === 'staff') renderStaffGrid();
+            if (tabId === 'inquiries') renderInquiriesAndFeedback();
+            if (tabId === 'reports') initCharts();
+            if (tabId === 'dashboard') initDashboardChart();
+        }
+
+        // --- 3. RENDERING FUNCTIONS ---
+        function renderDoctorSidebar() {
+            const container = document.getElementById('doctor-list-container');
+            if (!container) return;
+
+            container.innerHTML = appData.doctors.map(doc => `
+                <div class="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition">
+                    <div class="flex items-center gap-3">
+                        <img src="${doc.avatar}" alt="${doc.name}" class="w-9 h-9 rounded-full object-cover">
+                        <div>
+                            <p class="font-bold text-slate-800 text-xs">${doc.name}</p>
+                            <p class="text-[11px] text-brand-600 font-medium">${doc.specialty}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                        <i data-lucide="clock" class="w-3 h-3"></i>
+                        <span>${doc.time}</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderPatientsTable() {
+            const tbody = document.getElementById('patients-table-body');
+            const searchVal = (document.getElementById('patient-search-input')?.value || '').toLowerCase();
+            if (!tbody) return;
+
+            const filtered = appData.patients.filter(p => 
+                p.name.toLowerCase().includes(searchVal) || 
+                p.email.toLowerCase().includes(searchVal) ||
+                p.phone.includes(searchVal)
+            );
+
+            tbody.innerHTML = filtered.map(p => `
+                <tr class="hover:bg-slate-50/80 transition">
+                    <td class="p-4 flex items-center gap-3">
+                        <img src="${p.avatar}" class="w-8 h-8 rounded-full object-cover">
+                        <span class="font-bold text-slate-800">${p.name}</span>
+                    </td>
+                    <td class="p-4">
+                        <p class="font-medium text-slate-700">${p.phone}</p>
+                        <p class="text-slate-400 text-[11px]">${p.email}</p>
+                    </td>
+                    <td class="p-4 font-medium">${p.age} Yrs / ${p.gender}</td>
+                    <td class="p-4"><span class="px-2 py-0.5 bg-brand-50 text-brand-700 font-bold rounded-lg">${p.blood}</span></td>
+                    <td class="p-4 text-slate-500 font-medium">${p.lastVisit}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="quickBookPatient('${p.name}')" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold rounded-xl text-[11px] transition">
+                            Book Visit
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderStaffGrid() {
+            const container = document.getElementById('staff-grid-container');
+            if (!container) return;
+
+            container.innerHTML = appData.doctors.map(doc => `
+                <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex items-center gap-4">
+                        <img src="${doc.avatar}" class="w-14 h-14 rounded-2xl object-cover border-2 border-brand-500">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-sm">${doc.name}</h4>
+                            <p class="text-xs font-semibold text-brand-600">${doc.specialty}</p>
+                            <span class="inline-block mt-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-md">Active Practitioner</span>
+                        </div>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                        <span>Availability:</span>
+                        <span class="font-semibold text-slate-800">${doc.time}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderInquiriesAndFeedback() {
+            const inqContainer = document.getElementById('inquiry-list-container');
+            const feedContainer = document.getElementById('feedback-list-container');
+
+            if (inqContainer) {
+                inqContainer.innerHTML = appData.inquiries.map(inq => `
+                    <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-800">${inq.patient}</span>
+                            <span class="text-slate-400 text-[10px]">${inq.time}</span>
+                        </div>
+                        <p class="text-xs text-slate-600">${inq.question}</p>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${inq.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}">${inq.status}</span>
+                            <button onclick="resolveInquiry(${inq.id})" class="text-xs text-brand-600 font-semibold hover:underline">Reply / Resolve</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            if (feedContainer) {
+                feedContainer.innerHTML = appData.feedback.map(fb => `
+                    <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-800">${fb.patient}</span>
+                            <span class="text-amber-500 font-bold">${'★'.repeat(fb.rating)}</span>
+                        </div>
+                        <p class="text-xs text-slate-600">${fb.issue}</p>
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${fb.status === 'Under Review' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">${fb.status}</span>
+                            <button onclick="resolveFeedback(${fb.id})" class="text-xs text-slate-600 font-semibold hover:underline">Update Status</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderActivityStream() {
+            const container = document.getElementById('recent-activity-stream');
+            if (!container) return;
+
+            container.innerHTML = appData.activities.map(act => `
+                <div class="flex items-start gap-3 text-xs">
+                    <div class="w-2 h-2 rounded-full bg-brand-600 mt-1.5"></div>
+                    <div>
+                        <p class="font-bold text-slate-800">${act.user}</p>
+                        <p class="text-slate-500">${act.action}</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">${act.time}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- 4. MODAL & INTERACTION HANDLERS ---
+        function openEditScheduleModal(id) {
+            const modal = document.getElementById('edit-schedule-popover');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeEditScheduleModal() {
+            document.getElementById('edit-schedule-popover')?.classList.add('hidden');
+        }
+
+        function saveEditSchedule() {
+            closeEditScheduleModal();
+            showToast("Schedule updated successfully!");
+        }
+
+        function openNewAppointmentModal() {
+            populateSelects();
+            document.getElementById('modal-book-appointment')?.classList.remove('hidden');
+        }
+
+        function openAddPatientModal() {
+            document.getElementById('modal-add-patient')?.classList.remove('hidden');
+        }
+
+        function openAddStaffModal() {
+            showToast("Staff management dialog opened.");
+        }
+
+        function closeModal(id) {
+            document.getElementById(id)?.classList.add('hidden');
+        }
+
+        function populateSelects() {
+            const patientSel = document.getElementById('book-patient-select');
+            const doctorSel = document.getElementById('book-doctor-select');
+
+            if (patientSel) {
+                patientSel.innerHTML = appData.patients.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            }
+            if (doctorSel) {
+                doctorSel.innerHTML = appData.doctors.map(d => `<option value="${d.name}">${d.name} (${d.specialty})</option>`).join('');
+            }
+        }
+
+        function handleBookAppointment(e) {
+            e.preventDefault();
+            const patient = document.getElementById('book-patient-select').value;
+            const doctor = document.getElementById('book-doctor-select').value;
+            
+            appData.activities.unshift({
+                user: 'Sarah Jenkins',
+                action: `Booked ${patient} with ${doctor}`,
+                time: 'Just now'
+            });
+
+            saveData();
+            closeModal('modal-book-appointment');
+            renderActivityStream();
+            showToast(`Appointment booked for ${patient}!`);
+        }
+
+        function handleAddPatient(e) {
+            e.preventDefault();
+            const name = document.getElementById('patient-name').value;
+            const email = document.getElementById('patient-email').value;
+            const phone = document.getElementById('patient-phone').value;
+            const age = document.getElementById('patient-age').value;
+            const gender = document.getElementById('patient-gender').value;
+            const blood = document.getElementById('patient-blood').value;
+
+            appData.patients.unshift({
+                id: Date.now(),
+                name, email, phone, age, gender, blood,
+                lastVisit: 'New Patient',
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
+            });
+
+            saveData();
+            closeModal('modal-add-patient');
+            renderPatientsTable();
+            showToast(`Added new patient: ${name}`);
+        }
+
+        function quickBookPatient(name) {
+            switchTab('appointments');
+            openNewAppointmentModal();
+        }
+
+        function resolveInquiry(id) {
+            const inq = appData.inquiries.find(i => i.id === id);
+            if (inq) {
+                inq.status = 'Responded';
+                saveData();
+                renderInquiriesAndFeedback();
+                showToast("Inquiry marked as Responded.");
+            }
+        }
+
+        function resolveFeedback(id) {
+            const fb = appData.feedback.find(f => f.id === id);
+            if (fb) {
+                fb.status = 'Resolved';
+                saveData();
+                renderInquiriesAndFeedback();
+                showToast("Feedback marked as Resolved.");
+            }
+        }
+
+        function exportDataCSV() {
+            showToast("Exporting data as CSV spreadsheet...");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            if (toast && toastMsg) {
+                toastMsg.innerText = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+        }
+
+        // --- 5. CHARTS INITIALIZATION ---
+        function initCharts() {
+            const ctx1 = document.getElementById('servicesChart')?.getContext('2d');
+            const ctx2 = document.getElementById('statusChart')?.getContext('2d');
+
+            if (ctx1) {
+                new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Check-Up Kid', 'Heart Check', 'Teeth Check', 'Pediatric Control', 'Dermatology'],
+                        datasets: [{
+                            label: 'Requests Count',
+                            data: [42, 28, 35, 50, 19],
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 12
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            if (ctx2) {
+                new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'Rescheduled', 'Cancelled'],
+                        datasets: [{
+                            data: [75, 15, 10],
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        function initDashboardChart() {
+            const ctx = document.getElementById('dashboardChart')?.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Patient Traffic',
+                            data: [18, 24, 32, 28, 40, 22, 15],
+                            borderColor: '#2563eb',
+                            tension: 0.4,
+                            fill: false
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        window.onload = function() {
+            renderDoctorSidebar();
+            renderPatientsTable();
+            renderStaffGrid();
+            renderInquiriesAndFeedback();
+            renderActivityStream();
+            initDashboardChart();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
