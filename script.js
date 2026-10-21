@@ -129,8 +129,8 @@
                     <td class="p-4"><span class="px-2 py-0.5 bg-brand-50 text-brand-700 font-bold rounded-lg">${p.blood}</span></td>
                     <td class="p-4 text-slate-500 font-medium">${p.lastVisit}</td>
                     <td class="p-4 text-right">
-                        <button onclick="quickBookPatient('${p.name}')" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold rounded-xl text-[11px] transition">
-                            Book Visit
+                        <button onclick="viewDetails('${p.name}')" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold rounded-xl text-[11px] transition">
+                            View Details
                         </button>
                     </td>
                 </tr>
