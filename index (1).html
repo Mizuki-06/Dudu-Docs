@@ -69,7 +69,7 @@
                 <i data-lucide="bell" class="w-4 h-4"></i>
                 <span class="absolute top-2 right-2 w-2 h-2 bg-brand-600 rounded-full"></span>
             </button>
-            <button onclick="switchTab('staff')" class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
+            <button id="settings-nav-button" onclick="switchTab('settings')" aria-label="Settings" title="Settings" aria-pressed="false" class="settings-nav-button w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
                 <i data-lucide="settings" class="w-4 h-4"></i>
             </button>
             
@@ -91,6 +91,7 @@
         <button onclick="switchTab('reports')" class="py-1 px-3 text-slate-600">Report</button>
         <button onclick="switchTab('inquiries')" class="py-1 px-3 text-slate-600">Inquiries</button>
         <button onclick="switchTab('staff')" class="py-1 px-3 text-slate-600">Staff</button>
+        <button onclick="switchTab('settings')" class="py-1 px-3 text-slate-600">Settings</button>
     </div>
 
     <!-- MAIN APP CONTAINER -->
@@ -766,6 +767,12 @@
 
             const activeSec = document.getElementById(`section-${tabId}`);
             const activeNav = document.getElementById(`nav-${tabId}`);
+            const settingsButton = document.getElementById('settings-nav-button');
+            if (settingsButton) {
+                const isSettings = tabId === 'settings';
+                settingsButton.classList.toggle('is-active', isSettings);
+                settingsButton.setAttribute('aria-pressed', String(isSettings));
+            }
             
             if (activeSec) activeSec.classList.remove('hidden');
             if (activeNav) {
@@ -1038,10 +1045,12 @@
             XLSX.writeFile(wb, 'youcare-report.xlsx'); showToast('Excel report downloaded.');
         }
 
-        function saveSettings(){const v={name:document.getElementById('settings-name').value,email:document.getElementById('settings-email').value,phone:document.getElementById('settings-phone').value,language:document.getElementById('settings-language').value,dateFormat:document.getElementById('settings-date').value,timeZone:document.getElementById('settings-timezone').value};localStorage.setItem('youcare_settings',JSON.stringify(v));showToast('Settings saved.');}
+        function saveSettings(){const v={name:document.getElementById('settings-name').value,email:document.getElementById('settings-email').value,phone:document.getElementById('settings-phone').value,language:document.getElementById('settings-language').value,dateFormat:document.getElementById('settings-date').value,timeZone:document.getElementById('settings-timezone').value};localStorage.setItem('youcare_settings',JSON.stringify(v));const name=document.getElementById('current-user-name');if(name)name.textContent=v.name;showToast('Settings saved.');}
+function loadSettings(){try{const v=JSON.parse(localStorage.getItem('youcare_settings')||'null');if(!v)return;const map={'settings-name':'name','settings-email':'email','settings-phone':'phone','settings-language':'language','settings-date':'dateFormat','settings-timezone':'timeZone'};Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el&&v[key])el.value=v[key];});const name=document.getElementById('current-user-name');if(name&&v.name)name.textContent=v.name;}catch(e){console.warn('Could not load saved settings',e);}}
 function setAppearance(mode){document.querySelectorAll('.appearance-choice').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().includes(mode)));localStorage.setItem('youcare_appearance',mode);showToast('Appearance preference saved.');}
 function logout(){showToast('Log out is a demo action; authentication is not connected.');}
-\n        function showToast(msg) {
+
+        function showToast(msg) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
             if (toast && toastMsg) {
@@ -1118,6 +1127,7 @@ function logout(){showToast('Log out is a demo action; authentication is not con
             initDashboardChart();
             lucide.createIcons();
         };
-    </script>
+            loadSettings();
+</script>
 </body>
 </html>

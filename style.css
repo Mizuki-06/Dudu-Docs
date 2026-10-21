@@ -1,4 +1,5 @@
-body {
+
+        body {
             font-family: 'Inter', sans-serif;
             background-color: #f4f6fb;
             color: #1e293b;
@@ -33,3 +34,51 @@ body {
             backdrop-filter: blur(10px);
             border: 1px solid rgba(226, 232, 240, 0.8);
         }
+     
+        .settings-card{background:#fff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1.25rem;box-shadow:0 1px 2px #0f172a05}
+        .settings-heading{display:flex;align-items:center;gap:.75rem}.settings-heading h2{font-size:14px;font-weight:700;color:#334155}
+        .settings-heading p,.settings-note{color:#718096;font-size:11px}
+        .settings-icon{display:flex;align-items:center;justify-content:center;width:2rem;height:2rem;flex-shrink:0;border-radius:.75rem;background:#eff6ff;color:#4770f5}
+        .settings-icon svg{width:16px;height:16px}.settings-label{display:block;font-size:11px;font-weight:500;color:#334155}
+        .settings-input{display:block;width:100%;margin-top:5px;border:1px solid #e2e8f0;border-radius:.7rem;padding:.55rem .65rem;color:#475569;font-size:12px;background:#fff;min-width:0}
+        .settings-toggle{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 0;border-bottom:1px solid #edf0f5}
+        .settings-toggle b,.settings-toggle small{display:block}.settings-toggle b{font-size:11px}.settings-toggle small{color:#718096;font-size:10px;margin-top:3px}
+        .appearance-choice{border:1px solid #e2e8f0;border-radius:.7rem;padding:.65rem .25rem;font-size:11px;color:#475569}
+        .appearance-choice.active{border-color:#4770f5;color:#4770f5;background:#eff6ff}
+        @media(max-width:900px){.calendar-grid{grid-template-columns:58px repeat(7,minmax(88px,1fr))}}
+        @media(max-width:640px){#section-appointments .calendar-grid{grid-template-columns:48px repeat(7,minmax(76px,1fr))}#section-appointments .calendar-grid>*{font-size:10px}#section-appointments .overflow-x-auto{-webkit-overflow-scrolling:touch}#section-appointments #appointment-search{width:100%}}
+
+
+/* Polished Settings page */
+#section-settings { max-width: 960px; width: 100%; margin: 0 auto; padding-bottom: 1rem; }
+#section-settings > .flex:first-child { margin-bottom: 1.25rem; }
+#section-settings h1 { line-height: 1.25; letter-spacing: -.025em; }
+#section-settings > .grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; align-items: stretch; }
+#section-settings .settings-card { min-width: 0; padding: 1.35rem; border: 1px solid #e7ebf2; border-radius: 1.1rem; background: #fff; box-shadow: 0 2px 8px rgba(15,23,42,.025); }
+#section-settings .settings-heading { gap: .7rem; margin-bottom: 1.15rem; }
+#section-settings .settings-heading h2 { margin: 0 0 .2rem; font-size: .9rem; line-height: 1.35; }
+#section-settings .settings-heading p { font-size: .75rem; line-height: 1.45; margin: 0; }
+#section-settings .settings-label { font-size: .75rem; line-height: 1.45; font-weight: 600; }
+#section-settings .settings-input { box-sizing: border-box; min-height: 2.55rem; margin-top: .4rem; padding: .6rem .7rem; font-size: .8rem; line-height: 1.35; border-radius: .65rem; }
+#section-settings .settings-input:focus { outline: 2px solid #c7d2fe; border-color: #5474f5; }
+#section-settings .settings-note { font-size: .72rem; line-height: 1.5; }
+#section-settings .settings-toggle { gap: 1rem; padding: .85rem 0; }
+#section-settings .settings-toggle b { font-size: .8rem; line-height: 1.4; }
+#section-settings .settings-toggle small { font-size: .7rem; line-height: 1.45; }
+#section-settings .settings-toggle input { width: 2.25rem; height: 1.2rem; flex-shrink: 0; accent-color: #4b68ed; cursor: pointer; }
+#section-settings button { cursor: pointer; transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease; }
+#section-settings .appearance-choice { min-height: 2.6rem; padding: .65rem .4rem; font-size: .76rem; font-weight: 600; background: #fff; }
+#section-settings .appearance-choice:hover { border-color: #9aafff; }
+#section-settings .appearance-choice.active { border: 1.5px solid #5474f5; color: #4164ed; background: #f0f5ff; box-shadow: 0 0 0 2px rgba(84,116,245,.06); }
+.settings-nav-button { transition: all .2s ease; }
+.settings-nav-button.is-active { background: #edf2ff !important; color: #4264ed !important; border-color: #9db0ff !important; box-shadow: 0 0 0 3px rgba(79,106,237,.10); }
+.settings-nav-button.is-active svg { stroke-width: 2.5; transform: rotate(25deg); }
+.settings-nav-button svg { transition: transform .2s ease; }
+@media(max-width: 760px) {
+  #section-settings { padding: 0 .1rem 1rem; }
+  #section-settings > .grid { grid-template-columns: minmax(0,1fr); gap: .85rem; }
+  #section-settings .settings-card { padding: 1rem; border-radius: .9rem; }
+  #section-settings > .flex:first-child { align-items: flex-start; }
+  #section-settings .appearance-choice { font-size: .7rem; }
+}
+@media(prefers-reduced-motion: reduce) { .settings-nav-button, .settings-nav-button svg, #section-settings button { transition: none !important; } }
