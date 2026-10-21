@@ -1,21 +1,23 @@
-async function registerPatient() {
+async function loadPatients() {
     const { data, error } = await db
         .from("patients")
-        .insert({
-            full_name: "Juan Demo",
-            contact_number: "0000000000"
-        })
-        .select()
-        .single();
+        .select("*");
 
     if (error) {
-        console.error("Registration failed:", error.message);
-        alert("Failed to register patient.");
-        return;
+        throw new Error(`Could not load patients: ${error.message}`);
     }
 
-    console.log("Patient registered:", data);
-    console.log("Patient code:", data.patient_code);
+    return data;
+}
 
-    alert("Patient registered successfully!");
+async function registerPatient(patient) {
+    const { error } = await db
+        .from("patients")
+        .insert(patient);
+
+    if (error) {
+        throw new Error(`Could not add patient: ${error.message}`);
+    }
+
+    return patient;
 }
