@@ -35,8 +35,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Chart.js for Reports -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
-
 </head>
 <body class="bg-bgSoft min-h-screen text-slate-800 flex flex-col">
 
@@ -57,7 +57,7 @@
             <button onclick="switchTab('appointments')" id="nav-appointments" class="tab-pill px-5 py-2 rounded-full text-sm font-medium bg-brand-600 text-white shadow-sm">Appointment</button>
             <button onclick="switchTab('reports')" id="nav-reports" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Report</button>
             <button onclick="switchTab('inquiries')" id="nav-inquiries" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
-                Inquiries & Feedback
+                Inquiries
                 <span id="badge-inquiries" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
             </button>
             <button onclick="switchTab('staff')" id="nav-staff" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Staff</button>
@@ -171,10 +171,10 @@
                         </div>
                     </div>
 
-                    <!-- Doctor Appointment List Sidebar -->
+                    <!-- Doctor Schedule Sidebar -->
                     <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
                         <div class="flex items-center justify-between">
-                            <h3 class="font-semibold text-slate-800 text-sm">Doctor Appointment List</h3>
+                            <h3 class="font-semibold text-slate-800 text-sm">Doctor Schedule</h3>
                             <button class="text-slate-400 hover:text-slate-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
                         </div>
 
@@ -480,7 +480,7 @@
         <section id="section-inquiries" class="hidden space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold text-slate-900">Inquiries & Feedback</h1>
+                    <h1 class="text-2xl font-bold text-slate-900">Inquiries</h1>
                     <p class="text-slate-500 text-sm">Review questions, complaints, and patient satisfaction notes.</p>
                 </div>
             </div>
@@ -533,13 +533,21 @@
             </div>
         </section>
 
+<section id="section-settings" class="hidden space-y-6 max-w-5xl mx-auto">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div><h1 class="text-2xl font-bold text-slate-900">Settings</h1><p class="text-slate-500 text-sm">Manage your account, security and workspace preferences.</p></div><div class="flex gap-2"><button onclick="switchTab('dashboard')" class="px-4 py-2 rounded-xl border bg-white text-sm">Cancel</button><button onclick="saveSettings()" class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold">Save changes</button></div></div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+<div class="settings-card"><div class="settings-heading"><span class="settings-icon"><i data-lucide="user-round"></i></span><div><h2>Account & profile</h2><p>Your personal details and contact information.</p></div></div><div class="flex items-center gap-3 my-4"><div class="w-12 h-12 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold">SJ</div><button class="px-3 py-2 rounded-xl border text-sm" onclick="showToast('Photo upload is not connected yet.')">Change photo</button></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><label class="settings-label">Full name<input id="settings-name" value="Dr. Sarah Jenkins" class="settings-input"></label><label class="settings-label">Email address<input id="settings-email" type="email" value="sarah.jenkins@youcare.com" class="settings-input"></label><label class="settings-label">Phone number<input id="settings-phone" value="+1 (415) 555-0128" class="settings-input"></label><label class="settings-label">Role<input value="Head Admin" disabled class="settings-input"></label></div><p class="settings-note mt-4">Your role is managed by your organization.</p></div>
+<div class="settings-card"><div class="settings-heading"><span class="settings-icon"><i data-lucide="shield-check"></i></span><div><h2>Security</h2><p>Keep your account and patient data protected.</p></div></div><div class="py-5"><p class="text-sm font-medium">Password</p><p class="settings-note">Last changed 30 days ago</p><button onclick="showToast('Password management is not connected yet.')" class="mt-3 px-3 py-2 rounded-xl border text-sm">Change password</button></div><label class="settings-toggle"><span><b>Two-factor authentication</b><small>Use an extra verification step at sign-in.</small></span><input type="checkbox" checked></label><div class="flex justify-between pt-4"><span class="text-sm">Current browser session</span><span class="text-xs text-emerald-700">Current</span></div></div>
+<div class="settings-card"><div class="settings-heading"><span class="settings-icon"><i data-lucide="bell"></i></span><div><h2>Notifications</h2><p>Choose the email updates you want to receive.</p></div></div><label class="settings-toggle"><span><b>Appointment updates</b><small>New bookings, changes and cancellations.</small></span><input type="checkbox" checked></label><label class="settings-toggle"><span><b>Patient inquiries</b><small>New messages and patient feedback.</small></span><input type="checkbox" checked></label><label class="settings-toggle"><span><b>Weekly summary</b><small>A weekly overview of clinic activity.</small></span><input type="checkbox"></label><p class="settings-note bg-slate-50 p-3 rounded-xl mt-3">Important security alerts are always sent to your email.</p></div>
+<div class="settings-card"><div class="settings-heading"><span class="settings-icon"><i data-lucide="sliders-horizontal"></i></span><div><h2>Preferences</h2><p>Personalize your everyday workspace.</p></div></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4"><label class="settings-label">Language<select id="settings-language" class="settings-input"><option>English (US)</option><option>Filipino</option></select></label><label class="settings-label">Date format<select id="settings-date" class="settings-input"><option>MM / DD / YYYY</option><option>DD / MM / YYYY</option><option>YYYY / MM / DD</option></select></label></div><label class="settings-label block mt-3">Time zone<select id="settings-timezone" class="settings-input"><option>Pacific Time (US & Canada)</option><option>Philippine Standard Time</option><option>UTC</option></select></label><div class="settings-label mt-4">Appearance<div class="grid grid-cols-3 gap-2 mt-2"><button onclick="setAppearance('light')" class="appearance-choice active">☼ Light</button><button onclick="setAppearance('dark')" class="appearance-choice">☾ Dark</button><button onclick="setAppearance('system')" class="appearance-choice">▣ System</button></div></div></div></div>
+<div class="text-center"><button onclick="logout()" class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold">Log Out</button></div></section>
         <section id="section-reports" class="hidden space-y-6">
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
                     <p class="text-slate-500 text-sm">Comprehensive performance metrics and appointment service trends.</p>
                 </div>
-                <button onclick="exportDataCSV()" class="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-2xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">
+                <button onclick="exportDataExcel()" class="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-2xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">
                     <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Full Report
                 </button>
             </div>
@@ -744,7 +752,7 @@
 
         // --- 2. NAVIGATION & TAB SWITCHING ---
         function switchTab(tabId) {
-            const tabs = ['dashboard', 'patients', 'appointments', 'reports', 'inquiries', 'staff'];
+            const tabs = ['dashboard', 'patients', 'appointments', 'reports', 'inquiries', 'staff', 'settings'];
             
             tabs.forEach(tab => {
                 const sec = document.getElementById(`section-${tab}`);
@@ -1015,10 +1023,25 @@
         }
 
         function exportDataCSV() {
-            showToast("Exporting data as CSV spreadsheet...");
+            const rows = [...appData.patients.map(x => ({Type:'Patient', ...x})), ...appData.doctors.map(x => ({Type:'Doctor', ...x})), ...appData.inquiries.map(x => ({Type:'Inquiry', ...x})), ...appData.feedback.map(x => ({Type:'Feedback', ...x}))];
+            const csv = [Object.keys(rows[0] || {Type:'Record'}).join(','), ...rows.map(row => Object.values(row).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))].join('\\r\\n');
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}), link = document.createElement('a');
+            link.href = URL.createObjectURL(blob); link.download = 'youcare-report.csv'; link.click(); URL.revokeObjectURL(link.href);
+            showToast('Report downloaded.');
+        }
+        function exportDataExcel() {
+            if (typeof XLSX === 'undefined') { showToast('Excel library did not load. Check your internet connection.'); return; }
+            const wb = XLSX.utils.book_new();
+            [['Patients',appData.patients],['Doctors',appData.doctors],['Inquiries',appData.inquiries],['Feedback',appData.feedback],['Activities',appData.activities]].forEach(([name,rows]) => {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{Message:'No records available'}]), name);
+            });
+            XLSX.writeFile(wb, 'youcare-report.xlsx'); showToast('Excel report downloaded.');
         }
 
-        function showToast(msg) {
+        function saveSettings(){const v={name:document.getElementById('settings-name').value,email:document.getElementById('settings-email').value,phone:document.getElementById('settings-phone').value,language:document.getElementById('settings-language').value,dateFormat:document.getElementById('settings-date').value,timeZone:document.getElementById('settings-timezone').value};localStorage.setItem('youcare_settings',JSON.stringify(v));showToast('Settings saved.');}
+function setAppearance(mode){document.querySelectorAll('.appearance-choice').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().includes(mode)));localStorage.setItem('youcare_appearance',mode);showToast('Appearance preference saved.');}
+function logout(){showToast('Log out is a demo action; authentication is not connected.');}
+\n        function showToast(msg) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toast-message');
             if (toast && toastMsg) {
