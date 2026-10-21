@@ -299,9 +299,18 @@
     <!-- JAVASCRIPT HELPERS -->
     <script>
         function handleLogin(event) {
-            event.preventDefault();
-            alert("Login simulated successfully!");
-        }
+    event.preventDefault();
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if (email === "reception@gmail.com" && password === "password123") {
+        alert("Login successful!");
+        window.location.href = "index.html";
+    } else {
+        alert("Invalid email or password!");
+    }
+}
     </script>
 </body>
 </html>
