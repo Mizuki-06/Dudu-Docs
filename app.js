@@ -506,7 +506,7 @@
                     if(!isAppointmentAtLeastOneHourAhead(date,slot))continue;
                     const range=getAppointmentTimeRange(slot);
                     const overlapsExisting=appData.appointments.some(appointment=>{
-                        if(String(appointment.id)===String(excludeId)||appointment.doctor!==doctorName||appointment.date!==date)return false;
+                        if(String(appointment.id)===String(excludeId)||appointment.doctor!==doctorName||appointment.date!==date||normalizeAppointmentStatus(appointment.status)!=='Scheduled')return false;
                         const existingRange=getAppointmentTimeRange(appointment.time);
                         return Boolean(range&&existingRange&&range.start<existingRange.end&&existingRange.start<range.end);
                     });
@@ -604,6 +604,23 @@
             saveData();
             renderMiniCalendar();
             showToast('Appointment deleted.');
+        }
+
+        function completeAppointment(id) {
+            const appointment=appData.appointments.find(item=>String(item.id)===String(id));
+            if(!appointment){
+                showToast('Could not find that appointment. Refresh the calendar and try again.');
+                return;
+            }
+            if(normalizeAppointmentStatus(appointment.status)==='Completed'){
+                showToast('This appointment is already completed.');
+                return;
+            }
+            if(!window.confirm(`Mark the appointment for ${appointment.patient} on ${appointment.date} as completed?`))return;
+            appointment.status='Completed';
+            saveData();
+            renderMiniCalendar();
+            showToast(`Appointment for ${appointment.patient} marked completed.`);
         }
 
         function validatePatientField(fieldId) {
@@ -823,11 +840,85 @@
 
         function exportDataExcel() {
             if (typeof XLSX === 'undefined') { showToast('Excel library did not load. Check your internet connection.'); return; }
-            const wb = XLSX.utils.book_new();
-            [['Patients',appData.patients],['Doctors',appData.doctors],['Appointments',appData.appointments],['Inquiries',appData.inquiries],['Feedback',appData.feedback],['Activities',appData.activities]].forEach(([name,rows]) => {
-                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{Message:'No records available'}]), name);
-            });
-            XLSX.writeFile(wb, 'babydududocs-report.xlsx'); showToast('Excel report downloaded.');
+            const metrics=getAppointmentReportMetrics();
+            const workbook=XLSX.utils.book_new();
+            const summaryRows=[
+                ['Baby Dudu Docs — Full Report'],
+                ['Generated',new Date().toLocaleString()],
+                [],
+                ['Appointment Analytics','Count'],
+                ['Total appointments',metrics.total],
+                ['Completed appointments',metrics.completed],
+                ['Completion rate',metrics.completionRate/100],
+                ['Scheduled appointments',metrics.statuses.Scheduled||0],
+                ['Cancelled appointments',metrics.statuses.Cancelled||0],
+                [],
+                ['Appointments by Status','Count'],
+                ...Object.entries(metrics.statuses).sort(([a],[b])=>a.localeCompare(b)),
+                [],
+                ['Appointments by Service','Count'],
+                ...Object.entries(metrics.services).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))
+            ];
+            const summarySheet=XLSX.utils.aoa_to_sheet(summaryRows);
+            summarySheet['!cols']=[{wch:36},{wch:24}];
+            summarySheet['!merges']=[{s:{r:0,c:0},e:{r:0,c:1}}];
+            summarySheet['!freeze']={xSplit:0,ySplit:4,topLeftCell:'A5',activePane:'bottomLeft',state:'frozen'};
+            const completionCell=summarySheet['B7'];
+            if(completionCell)completionCell.z='0%';
+            XLSX.utils.book_append_sheet(workbook,summarySheet,'Summary');
+
+            const addSheet=(name,headers,rows,widths)=>{
+                const sheet=XLSX.utils.aoa_to_sheet([headers,...rows]);
+                sheet['!cols']=widths.map(wch=>({wch}));
+                sheet['!autofilter']={ref:`A1:${XLSX.utils.encode_col(headers.length-1)}${Math.max(rows.length+1,1)}`};
+                sheet['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+                XLSX.utils.book_append_sheet(workbook,sheet,name);
+            };
+
+            addSheet('Appointments',
+                ['Appointment ID','Date','Time','Patient','Doctor','Specialty','Service Type','Status','Notes'],
+                [...appData.appointments].sort((a,b)=>a.date.localeCompare(b.date)||(getAppointmentTimeRange(a.time)?.start??0)-(getAppointmentTimeRange(b.time)?.start??0)).map(item=>[
+                    item.id,item.date,item.time,item.patient,item.doctor,
+                    appData.doctors.find(doctor=>doctor.name===item.doctor)?.specialty||'',
+                    item.service,normalizeAppointmentStatus(item.status),item.notes||''
+                ]),
+                [18,14,27,24,30,34,36,18,50]
+            );
+            addSheet('Patients',
+                ['Patient ID','Full Name','Date of Birth','Age','Sex','Contact Number','Email','Address','Blood Group','Allergies','Medical History','Last Visit','Status'],
+                appData.patients.map(item=>[
+                    item.id??'',item.full_name||item.name||'',item.date_of_birth||'',item.age??'',
+                    item.sex||item.gender||'',item.contact_number||item.phone||'',item.email||'',
+                    item.address||'',item.blood_group||item.blood||'',item.allergies||'',
+                    item.medical_history||'',item.last_visit||item.lastVisit||'',item.status||''
+                ]),
+                [16,28,16,10,14,22,30,36,14,30,45,16,16]
+            );
+            addSheet('Doctors',
+                ['Doctor ID','Name','Specialty','Office Hours','Services'],
+                appData.doctors.map(item=>[
+                    item.id??'',item.name||'',item.specialty||'',item.time||'',
+                    Array.isArray(item.services)?item.services.join('; '):''
+                ]),
+                [16,30,36,60,48]
+            );
+            addSheet('Inquiries',
+                ['Inquiry ID','Patient','Question','Status','Time'],
+                appData.inquiries.map(item=>[item.id??'',item.patient||'',item.question||'',item.status||'',item.time||'']),
+                [16,24,70,18,20]
+            );
+            addSheet('Feedback',
+                ['Feedback ID','Patient','Type','Issue','Status','Rating'],
+                appData.feedback.map(item=>[item.id??'',item.patient||'',item.type||'',item.issue||'',item.status||'',item.rating??'']),
+                [16,24,18,70,20,12]
+            );
+            addSheet('Activities',
+                ['User','Activity','Time'],
+                appData.activities.map(item=>[item.user||'',item.action||'',item.time||'']),
+                [28,70,20]
+            );
+            XLSX.writeFile(workbook,'babydududocs-full-report.xlsx');
+            showToast('Organized full Excel report downloaded.');
         }
 
         function saveSettings(){const v={name:document.getElementById('settings-name').value,email:document.getElementById('settings-email').value,phone:document.getElementById('settings-phone').value,language:document.getElementById('settings-language').value,dateFormat:document.getElementById('settings-date').value,timeZone:document.getElementById('settings-timezone').value};localStorage.setItem('babydududocs_settings',JSON.stringify(v));const name=document.getElementById('current-user-name');if(name)name.textContent=v.name;showToast('Settings saved.');}
@@ -848,34 +939,87 @@ function logout(){showToast('Log out is a demo action; authentication is not con
         }
 
         // --- 5. CHARTS INITIALIZATION ---
+        function normalizeAppointmentStatus(status) {
+            const value=String(status||'Scheduled').trim();
+            const knownStatuses={
+                scheduled:'Scheduled',
+                completed:'Completed',
+                cancelled:'Cancelled',
+                canceled:'Cancelled',
+                rescheduled:'Rescheduled'
+            };
+            return knownStatuses[value.toLowerCase()]||value||'Unspecified';
+        }
+
+        function getAppointmentReportMetrics() {
+            const services={};
+            const statuses={};
+            appData.appointments.forEach(appointment=>{
+                const service=String(appointment.service||'').trim()||'Unspecified';
+                const status=normalizeAppointmentStatus(appointment.status);
+                services[service]=(services[service]||0)+1;
+                statuses[status]=(statuses[status]||0)+1;
+            });
+            const completed=statuses.Completed||0;
+            return {
+                total:appData.appointments.length,
+                completed,
+                completionRate:appData.appointments.length?completed/appData.appointments.length*100:0,
+                services,
+                statuses
+            };
+        }
+
         function initCharts() {
             const ctx1 = document.getElementById('servicesChart')?.getContext('2d');
             const ctx2 = document.getElementById('statusChart')?.getContext('2d');
+            const metrics=getAppointmentReportMetrics();
+            const total=document.getElementById('report-total-appointments');
+            const completed=document.getElementById('report-completed-appointments');
+            const rate=document.getElementById('report-completion-rate');
+            if(total)total.textContent=String(metrics.total);
+            if(completed)completed.textContent=String(metrics.completed);
+            if(rate)rate.textContent=`${metrics.completionRate.toFixed(1)}%`;
+            const servicesEmpty=document.getElementById('services-chart-empty');
+            const statusEmpty=document.getElementById('status-chart-empty');
+            if(servicesEmpty)servicesEmpty.classList.toggle('hidden',metrics.total>0);
+            if(statusEmpty)statusEmpty.classList.toggle('hidden',metrics.total>0);
+            if(ctx1)ctx1.canvas.classList.toggle('hidden',metrics.total===0);
+            if(ctx2)ctx2.canvas.classList.toggle('hidden',metrics.total===0);
+            if(ctx1&&window.Chart.getChart(ctx1.canvas))window.Chart.getChart(ctx1.canvas).destroy();
+            if(ctx2&&window.Chart.getChart(ctx2.canvas))window.Chart.getChart(ctx2.canvas).destroy();
 
-            if (ctx1) {
+            if (ctx1&&metrics.total) {
+                const services=Object.entries(metrics.services).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
                 new Chart(ctx1, {
                     type: 'bar',
                     data: {
-                        labels: ['Check-Up Kid', 'Heart Check', 'Teeth Check', 'Pediatric Control', 'Dermatology'],
+                        labels: services.map(([service])=>service),
                         datasets: [{
-                            label: 'Requests Count',
-                            data: [42, 28, 35, 50, 19],
+                            label: 'Appointments',
+                            data: services.map(([,count])=>count),
                             backgroundColor: '#3b82f6',
                             borderRadius: 12
                         }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
+                    options: { responsive: true, maintainAspectRatio: false, scales:{y:{beginAtZero:true,ticks:{precision:0}}} }
                 });
             }
 
-            if (ctx2) {
+            if (ctx2&&metrics.total) {
+                const statuses=Object.entries(metrics.statuses).sort((a,b)=>a[0].localeCompare(b[0]));
                 new Chart(ctx2, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Completed', 'Rescheduled', 'Cancelled'],
+                        labels: statuses.map(([status])=>status),
                         datasets: [{
-                            data: [75, 15, 10],
-                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                            data: statuses.map(([,count])=>count),
+                            backgroundColor: statuses.map(([status])=>({
+                                Completed:'#10b981',
+                                Scheduled:'#3b82f6',
+                                Cancelled:'#ef4444',
+                                Rescheduled:'#f59e0b'
+                            })[status]||'#94a3b8')
                         }]
                     },
                     options: { responsive: true, maintainAspectRatio: false }
@@ -934,7 +1078,16 @@ function logout(){showToast('Log out is a demo action; authentication is not con
             remove.className='rounded-lg border border-rose-200 px-1.5 py-1 text-[10px] font-semibold text-rose-700 hover:bg-rose-50';
             remove.textContent='Delete';
             remove.addEventListener('click',()=>deleteAppointment(appointment.id));
-            actions.append(edit,remove);
+            actions.append(edit);
+            if(normalizeAppointmentStatus(appointment.status)!=='Completed'){
+                const complete=document.createElement('button');
+                complete.type='button';
+                complete.className='rounded-lg border border-emerald-200 px-1.5 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-50';
+                complete.textContent='Complete';
+                complete.addEventListener('click',()=>completeAppointment(appointment.id));
+                actions.append(complete);
+            }
+            actions.append(remove);
             return actions;
         }
 
