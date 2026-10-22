@@ -1,4 +1,3 @@
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f4f6fb;
@@ -169,4 +168,34 @@
     #doctor-list-container .doctor-schedule-info,
     #doctor-list-container .doctor-schedule-hours { grid-column: 2; }
     #doctor-list-container .doctor-schedule-hours { margin-top: 0.25rem; }
+}
+
+
+/* Appointment toolbar and calendar responsive behavior */
+#section-appointments .appointment-add-label { white-space: nowrap; }
+#section-appointments #appointment-filter-panel input,
+#section-appointments #appointment-filter-panel select { min-width: 0; max-width: 100%; }
+#section-appointments #mini-calendar-grid button { min-width: 0; }
+#section-appointments #schedule-week-header { min-width: 650px; }
+@media (max-width: 640px) {
+  #section-appointments > div:first-child > div { width: 100%; }
+  #section-appointments > div:first-child button[onclick="openNewAppointmentModal()"] { width: 100%; justify-content: center; min-height: 44px; }
+  #section-appointments .bg-white.p-3.rounded-2xl { align-items: stretch; }
+  #section-appointments #appointment-search { width: 100%; }
+  #section-appointments #appointment-filter-toggle { min-height: 38px; }
+  #section-appointments #schedule-week-header { min-width: 650px; }
+}
+
+
+/* Appointment calendar header: hide unused legend/actions and keep navigation responsive */
+#section-appointments .schedule-nav-controls { flex-shrink: 0; }
+#section-appointments .schedule-nav-button { width: 42px; height: 42px; transition: background-color .18s ease, border-color .18s ease; }
+#section-appointments .schedule-nav-button:focus-visible { outline: 2px solid #93a8ff; outline-offset: 2px; }
+#section-appointments .schedule-nav-button:hover { border-color: #c7d2fe; }
+@media (max-width: 640px) {
+  #section-appointments .schedule-nav-button { width: 36px; height: 36px; }
+  #section-appointments #schedule-calendar-title { font-size: 1rem; line-height: 1.4; }
+  #section-appointments .schedule-nav-controls { gap: .35rem; }
+  #section-appointments .lg\:col-span-9 { padding: 1rem; }
+  #section-appointments .schedule-nav-controls i { width: 15px; height: 15px; }
 }

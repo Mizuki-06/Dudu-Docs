@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments | Baby Dudu Docs</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        bgSoft: '#f4f6fb',
+                        cardBg: '#ffffff'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Font Inter -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for Reports -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+<script>
+// Preserve existing locally saved clinic data after the brand rename.
+(function(){
+ const keys = ['youcare_doctors', 'youcare_patients', 'youcare_inquiries', 'youcare_feedback', 'youcare_activities', 'youcare_settings', 'youcare_appearance'];
+ keys.forEach(function(oldKey){
+   const newKey = oldKey.replace('youcare_', 'babydududocs_');
+   if (localStorage.getItem(newKey) === null && localStorage.getItem(oldKey) !== null) {
+     localStorage.setItem(newKey, localStorage.getItem(oldKey));
+   }
+ });
+})();
+</script>
+</head>
+<body class="bg-bgSoft min-h-screen text-slate-800 flex flex-col" data-page="appointments">
+
+    <!-- TOP NAVBAR -->
+    <header class="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')" data-page-link="dashboard">
+            <img src="./images/babydududocslogo.jpg" alt="Baby Dudu Docs clinic logo" class="w-12 h-12 rounded-full object-cover border border-slate-200 bg-white">
+            <span class="text-lg sm:text-xl font-bold tracking-tight text-slate-900">Baby Dudu Docs</span>
+        </div>
+
+        <!-- Central Navigation Pills -->
+        <nav class="hidden md:flex items-center bg-slate-100/80 p-1.5 rounded-full border border-slate-200/60 gap-1">
+            <button onclick="switchTab('dashboard')" data-page-link="dashboard" id="nav-dashboard" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Dashboard</button>
+            <button onclick="switchTab('patients')" data-page-link="patients" id="nav-patients" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Patient</button>
+            <button onclick="switchTab('appointments')" data-page-link="appointments" id="nav-appointments" class="tab-pill px-5 py-2 rounded-full text-sm font-medium bg-brand-600 text-white shadow-sm">Appointment</button>
+            <button onclick="switchTab('reports')" data-page-link="reports" id="nav-reports" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Report</button>
+            <button onclick="switchTab('inquiries')" data-page-link="inquiries" id="nav-inquiries" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
+                Inquiries
+                <span id="badge-inquiries" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
+            </button>
+            <button onclick="switchTab('staff')" data-page-link="staff" id="nav-staff" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Staff</button>
+        </nav>
+
+        <!-- User Actions & Profile -->
+        <div class="flex items-center gap-3">
+            <button onclick="switchTab('inquiries')" data-page-link="inquiries" class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition relative">
+                <i data-lucide="bell" class="w-4 h-4"></i>
+                <span class="absolute top-2 right-2 w-2 h-2 bg-brand-600 rounded-full"></span>
+            </button>
+            <button id="settings-nav-button" onclick="switchTab('settings')" data-page-link="settings" aria-label="Settings" title="Settings" aria-pressed="false" class="settings-nav-button w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+            </button>
+            
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" alt="User Profile" class="w-9 h-9 rounded-full object-cover border border-brand-500">
+                <div class="hidden sm:block text-left text-xs">
+                    <p class="font-semibold text-slate-800" id="current-user-name">Dr. Sarah Jenkins</p>
+                    <p class="text-slate-500" id="current-user-role">Head Admin</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE NAVIGATION (Visible on small screens) -->
+    <div class="mobile-navigation md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-medium overflow-x-auto">
+        <button onclick="switchTab('dashboard')" data-page-link="dashboard" class="py-1 px-3 text-slate-600">Dashboard</button>
+        <button onclick="switchTab('patients')" data-page-link="patients" class="py-1 px-3 text-slate-600">Patient</button>
+        <button onclick="switchTab('appointments')" data-page-link="appointments" class="py-1 px-3 bg-brand-600 text-white rounded-full">Appointment</button>
+        <button onclick="switchTab('reports')" data-page-link="reports" class="py-1 px-3 text-slate-600">Report</button>
+        <button onclick="switchTab('inquiries')" data-page-link="inquiries" class="py-1 px-3 text-slate-600">Inquiries</button>
+        <button onclick="switchTab('staff')" data-page-link="staff" class="py-1 px-3 text-slate-600">Staff</button>
+        <button onclick="switchTab('settings')" data-page-link="settings" class="py-1 px-3 text-slate-600">Settings</button>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+<section id="section-appointments" class="space-y-6">
+            <!-- Top Action Toolbar -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Appointment</h1>
+                <div class="flex items-center gap-3">
+                    <button onclick="openNewAppointmentModal()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 transition">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                        <span class="appointment-add-label">Add New</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls Bar -->
+            <div class="bg-white p-3 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button id="appointment-filter-toggle" type="button" onclick="toggleAppointmentFilters()" aria-expanded="false" class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i> Filter <span id="appointment-filter-count" class="hidden rounded-full bg-brand-600 px-1.5 py-0.5 text-white">0</span>
+                    </button>
+                    <button onclick="exportDataCSV()" class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 hover:bg-slate-50">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Download Data
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3">
+                </div>
+            </div>
+
+            <div id="appointment-filter-panel" class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <label class="text-xs font-semibold text-slate-600">Date from<input id="appointment-filter-from" type="date" class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm font-normal"></label>
+                    <label class="text-xs font-semibold text-slate-600">Date to<input id="appointment-filter-to" type="date" class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm font-normal"></label>
+                    <label class="text-xs font-semibold text-slate-600">Doctor<select id="appointment-filter-doctor" class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm font-normal"><option value="">All doctors</option></select></label>
+                    <label class="text-xs font-semibold text-slate-600">View<select id="appointment-filter-view" class="mt-1 w-full rounded-xl border border-slate-200 p-2 text-sm font-normal"><option value="all">All schedule items</option><option value="today">Today</option><option value="upcoming">Upcoming</option></select></label>
+                </div>
+                <div class="mt-3 flex flex-wrap justify-end gap-2"><button type="button" onclick="resetAppointmentFilters()" class="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold">Reset</button><button type="button" onclick="applyAppointmentFilters()" class="rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white">Apply filters</button></div>
+                <p id="appointment-filter-message" class="mt-2 text-xs text-slate-500" aria-live="polite"></p>
+            </div>
+
+            <!-- Calendar Main Layout (Split View: Left Sidebar Widget + Right Interactive Schedule Grid) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Sidebar Components (3 columns) -->
+                <div class="lg:col-span-3 space-y-6">
+                    <!-- Mini Calendar Card -->
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-slate-800 text-sm">Appointment Calendar</h3>
+                            <div class="flex items-center gap-1">
+                                <button type="button" onclick="changeCalendarMonth(-1)" aria-label="Previous month" class="p-1 rounded-full hover:bg-slate-100 text-slate-500"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                <button type="button" onclick="changeCalendarMonth(1)" aria-label="Next month" class="p-1 rounded-full hover:bg-slate-100 text-slate-500"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Days Header -->
+                        <div class="grid grid-cols-7 text-center text-[11px] font-semibold text-slate-400">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        </div>
+                        <!-- Mini Calendar Grid -->
+                        <div id="mini-calendar-title" class="text-center text-xs font-semibold text-slate-700"></div>
+                        <div id="mini-calendar-grid" class="grid grid-cols-7 text-center text-xs gap-y-2 font-medium text-slate-700" aria-label="Calendar dates"></div>
+                    </div>
+
+                    <!-- Doctor Schedule Sidebar -->
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-slate-800 text-sm">Doctor Schedule</h3>
+                            <button class="text-slate-400 hover:text-slate-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                        </div>
+
+                        <div class="space-y-3" id="doctor-list-container">
+                            <!-- Populated via JS -->
+                        </div>
+
+                        <button onclick="switchTab('staff')" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-2xl shadow-sm transition">
+                            See All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Main Weekly Interactive Schedule Grid (9 columns) -->
+                <div class="lg:col-span-9 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 overflow-x-auto relative">
+                    <!-- Calendar Header Controls -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-4 border-b border-slate-100 gap-4">
+                        <div class="flex items-center gap-4">
+                            <h2 id="schedule-calendar-title" class="text-xl font-bold text-slate-900">Appointment Schedule</h2>
+                            <span id="schedule-calendar-period" class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full border border-slate-200">Today</span>
+                            <div class="schedule-nav-controls flex items-center gap-2 shrink-0">
+                                <button type="button" onclick="shiftScheduleDate(-7)" aria-label="Previous week" title="Previous week" class="schedule-nav-button inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                <button type="button" onclick="shiftScheduleDate(7)" aria-label="Next week" title="Next week" class="schedule-nav-button inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <!-- Weekly Time Slots Table -->
+                    <div class="min-w-[700px]">
+                        <!-- Column Days Header -->
+                        <div id="schedule-week-header" class="grid grid-cols-8 text-xs font-semibold text-slate-500 text-center pb-3 border-b border-slate-100">
+                            <div class="text-slate-400">GMT+8</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div><div>SUN</div>
+                        </div>
+
+                        <!-- Time Rows & Event Canvas -->
+                        <div class="relative divide-y divide-slate-100 text-xs" id="interactive-schedule-grid">
+                            <!-- Time Slot: 09 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">09 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Check Health -->
+                                    <div onclick="openEditScheduleModal(1)" class="absolute left-[14%] w-[13%] top-2 bottom-2 bg-purple-50 border border-purple-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-purple-900 leading-tight">Check Health</p>
+                                        <p class="text-[10px] font-medium text-purple-600 mt-1">09 AM - 10 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Current Time Indicator Line -->
+                            <div class="absolute left-16 right-0 top-[110px] flex items-center z-10 pointer-events-none">
+                                <span class="w-3 h-3 bg-brand-600 rounded-full -ml-1.5 ring-4 ring-brand-100"></span>
+                                <div class="w-full border-t-2 border-dashed border-brand-500"></div>
+                            </div>
+
+                            <!-- Time Slot: 10 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">10 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Body Condition -->
+                                    <div onclick="openEditScheduleModal(2)" class="absolute left-[28%] w-[13%] top-2 bottom-2 bg-lime-50 border border-lime-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-lime-900 leading-tight">Body Condition</p>
+                                        <p class="text-[10px] font-medium text-lime-700 mt-1">10 AM - 11 AM</p>
+                                    </div>
+
+                                    <!-- Event Card: Check Your Teeth -->
+                                    <div onclick="openEditScheduleModal(3)" class="absolute left-[42%] w-[13%] top-2 bottom-2 bg-rose-50 border border-rose-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-rose-900 leading-tight">Check Your Teeth</p>
+                                        <p class="text-[10px] font-medium text-rose-600 mt-1">10 AM - 11 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Time Slot: 11 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">11 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Check-Up Kid -->
+                                    <div onclick="openEditScheduleModal(4)" class="absolute left-[28%] w-[13%] -top-20 h-20 bg-amber-50 border border-amber-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-amber-900 leading-tight">Check-Up Kid</p>
+                                        <p class="text-[10px] font-medium text-amber-700 mt-1">08 AM - 09 AM</p>
+                                    </div>
+
+                                    <!-- Event Card: Heart Check-Up -->
+                                    <div onclick="openEditScheduleModal(5)" class="absolute left-[28%] w-[13%] top-2 bottom-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-emerald-900 leading-tight">Heart Check-Up</p>
+                                        <p class="text-[10px] font-medium text-emerald-700 mt-1">08 AM - 10 AM</p>
+                                    </div>
+
+                                    <!-- Selected Event Card: Physical Control Health (Active Blue Pill style matching mockup) -->
+                                    <div onclick="openEditScheduleModal(6)" class="absolute left-[42%] w-[13%] -top-16 h-36 bg-brand-600 border border-brand-500 rounded-2xl p-3 text-white cursor-pointer shadow-lg shadow-brand-500/30 z-20 hover:bg-brand-700 transition flex flex-col justify-between">
+                                        <div>
+                                            <p class="font-bold leading-tight">Physical Control..</p>
+                                            <p class="text-[10px] text-brand-100 mt-1">09 AM - 11 AM</p>
+                                        </div>
+                                        <div class="flex justify-end">
+                                            <i data-lucide="mouse-pointer" class="w-4 h-4 fill-white text-white"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Time Slot: 12 AM -->
+                            <div class="grid grid-cols-8 h-24 items-start pt-2 relative">
+                                <span class="text-slate-400 text-center font-medium">12 AM</span>
+                                <div class="col-span-7 grid grid-cols-7 h-full relative">
+                                    <!-- Event Card: Check-Up Kid 2 -->
+                                    <div onclick="openEditScheduleModal(7)" class="absolute left-[28%] w-[13%] top-2 bottom-2 bg-lime-50 border border-lime-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-lime-900 leading-tight">Check-Up Kid</p>
+                                        <p class="text-[10px] font-medium text-lime-700 mt-1">12 AM - 13 AM</p>
+                                    </div>
+
+                                    <!-- Event Card: Check-Up -->
+                                    <div onclick="openEditScheduleModal(8)" class="absolute left-[70%] w-[13%] top-2 bottom-2 bg-purple-50 border border-purple-200 rounded-2xl p-2.5 cursor-pointer hover:shadow-md transition">
+                                        <p class="font-bold text-purple-900 leading-tight">Check-Up</p>
+                                        <p class="text-[10px] font-medium text-purple-700 mt-1">12 AM - 13 AM</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 border-t border-slate-100 pt-4">
+                        <h3 class="font-semibold text-slate-800 text-sm">Appointments for selected day</h3>
+                        <p id="booked-appointments-date" class="mt-1 text-xs text-slate-500"></p>
+                        <div id="booked-appointments-list" class="mt-3 space-y-2"></div>
+                    </div>
+
+                    <!-- Floating Interactive Popover Modal Mockup (Matching standard Edit Schedule UI from Screenshot) -->
+                    <div id="edit-schedule-popover" class="hidden absolute right-12 top-28 w-80 bg-white rounded-3xl border border-slate-200 p-5 shadow-2xl z-30 space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <h4 class="font-bold text-slate-800 text-sm">Edit Schedule</h4>
+                            <button onclick="closeEditScheduleModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <input type="text" id="modal-appointment-title" value="Physical Control Health" class="w-full font-semibold text-slate-800 text-sm border-b border-slate-200 pb-1 focus:outline-none focus:border-brand-600">
+                                <p class="text-xs text-slate-400 mt-1">Add Description</p>
+                            </div>
+
+                            <div class="flex items-center gap-2 text-xs text-slate-600 pt-1">
+                                <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+                                <span id="modal-appointment-time" class="font-medium">09:00 AM &rarr; 11:00 AM</span>
+                                <button class="ml-auto text-slate-400 hover:text-slate-600"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                            </div>
+
+                            <div class="space-y-1 pt-1">
+                                <div class="flex items-center gap-2 text-xs text-slate-600">
+                                    <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                                    <span class="font-medium">Add Guests / Patient</span>
+                                </div>
+                                <div class="flex items-center gap-2 pl-6">
+                                    <div class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold text-[10px] flex items-center justify-center">E</div>
+                                    <span class="text-xs text-slate-500" id="modal-patient-name">1 Going, 1 Awaiting</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 pt-2">
+                            <button onclick="closeEditScheduleModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
+                            <button onclick="saveEditSchedule()" class="px-5 py-2 rounded-xl text-xs font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- MODAL 1: Book New Appointment Modal -->
+    <div id="modal-book-appointment" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg">Book New Appointment</h3>
+                <button onclick="closeModal('modal-book-appointment')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <form onsubmit="handleBookAppointment(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Select Patient</label>
+                    <select id="book-patient-select" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <!-- Dynamic options -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Assigned Doctor</label>
+                        <select id="book-doctor-select" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <!-- Dynamic options -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Service Type</label>
+                        <select id="book-service-type" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Check-Up</option>
+                            <option>Heart Check-Up</option>
+                            <option>Pediatric Control</option>
+                            <option>Dental Consultation</option>
+                            <option>Dermatology Care</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Date</label>
+                        <input type="date" id="book-date" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Time Slot</label>
+                        <select id="book-time" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>08:00 AM - 09:00 AM</option>
+                            <option>09:00 AM - 10:00 AM</option>
+                            <option>10:00 AM - 11:00 AM</option>
+                            <option>11:00 AM - 12:00 PM</option>
+                            <option>01:00 PM - 02:00 PM</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Notes / Special Instructions</label>
+                    <textarea id="book-notes" rows="3" placeholder="Enter reason for visit or patient history..." class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-book-appointment')" class="px-4 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Confirm Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- TOAST NOTIFICATION BANNER -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-semibold pointer-events-none">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toast-message">Action saved successfully!</span>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
