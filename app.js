@@ -235,41 +235,62 @@
         }
 
         function renderInquiriesAndFeedback() {
-            const inqContainer = document.getElementById('inquiry-list-container');
-            const feedContainer = document.getElementById('feedback-list-container');
+    const inqContainer = document.getElementById('inquiry-list-container');
+    const inquiryCount = document.getElementById('inquiry-count');
 
-            if (inqContainer) {
-                inqContainer.innerHTML = appData.inquiries.map(inq => `
-                    <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="font-bold text-slate-800">${inq.patient}</span>
-                            <span class="text-slate-400 text-[10px]">${inq.time}</span>
-                        </div>
-                        <p class="text-xs text-slate-600">${inq.question}</p>
-                        <div class="flex items-center justify-between pt-2">
-                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${inq.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}">${inq.status}</span>
-                            <button onclick="resolveInquiry(${inq.id})" class="text-xs text-brand-600 font-semibold hover:underline">Reply / Resolve</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
+    // Display all patient inquiries
+    if (inqContainer) {
+        const inquiries = Array.isArray(appData.inquiries)
+            ? appData.inquiries
+            : [];
 
-            if (feedContainer) {
-                feedContainer.innerHTML = appData.feedback.map(fb => `
-                    <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="font-bold text-slate-800">${fb.patient}</span>
-                            <span class="text-amber-500 font-bold">${'★'.repeat(fb.rating)}</span>
-                        </div>
-                        <p class="text-xs text-slate-600">${fb.issue}</p>
-                        <div class="flex items-center justify-between pt-2">
-                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${fb.status === 'Under Review' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">${fb.status}</span>
-                            <button onclick="resolveFeedback(${fb.id})" class="text-xs text-slate-600 font-semibold hover:underline">Update Status</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
+        if (inquiryCount) {
+            inquiryCount.textContent =
+                `${inquiries.length} ${inquiries.length === 1 ? 'Inquiry' : 'Inquiries'}`;
         }
+
+        if (inquiries.length === 0) {
+            inqContainer.innerHTML = `
+                <p class="text-sm text-slate-500 py-4 text-center">
+                    No inquiries available yet.
+                </p>
+            `;
+        } else {
+            inqContainer.innerHTML = inquiries.map(inq => `
+                <div class="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-2">
+                    <div class="flex items-center justify-between text-xs gap-3">
+                        <span class="font-bold text-slate-800">
+                            ${inq.patient ?? 'Unknown Patient'}
+                        </span>
+                        <span class="text-slate-400 text-[10px]">
+                            ${inq.time ?? ''}
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-slate-600">
+                        ${inq.question ?? ''}
+                    </p>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            inq.status === 'Pending'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-emerald-100 text-emerald-700'
+                        }">
+                            ${inq.status ?? 'Pending'}
+                        </span>
+
+                        <button
+                            onclick="resolveInquiry(${Number(inq.id)})"
+                            class="text-xs text-brand-600 font-semibold hover:underline">
+                            Reply / Resolve
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            }
+         }
+       }
 
         function renderActivityStream() {
             const container = document.getElementById('recent-activity-stream');
@@ -745,12 +766,29 @@
 
         function resolveInquiry(id) {
             const inq = appData.inquiries.find(i => i.id === id);
-            if (inq) {
-                inq.status = 'Responded';
-                saveData();
-                renderInquiriesAndFeedback();
-                showToast("Inquiry marked as Responded.");
+
+            if (!inq) {
+            showToast("Inquiry not found.");
+            return;
             }
+
+            const reply = prompt(
+            "Patient inquiry:\n" + inq.question +
+            "\n\nType your reply to the patient:"
+            );
+
+             // Cancelled or empty reply
+            if (reply === null || !reply.trim()) {
+            return;
+            }
+
+            inq.reply = reply.trim();
+            inq.status = 'Responded';
+
+            saveData();
+            renderInquiriesAndFeedback();
+
+            showToast("Reply saved successfully.");
         }
 
         function resolveFeedback(id) {
