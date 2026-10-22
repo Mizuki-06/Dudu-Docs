@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Baby Dudu Docs - Log In</title>
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -58,6 +60,7 @@
             }
         }
 
+        /* BRAND LOGO AND NAME */
         .brand-box {
             display: flex;
             align-items: center;
@@ -73,8 +76,17 @@
             justify-content: center;
             background-color: #ffffff;
             border-radius: 0.75rem;
-            font-size: 1.25rem;
+            padding: 0.2rem;
+            overflow: hidden;
+            flex-shrink: 0;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 0.5rem;
         }
 
         .brand-name {
@@ -169,6 +181,7 @@
             justify-content: space-between;
             font-size: 0.75rem;
             padding-top: 0.25rem;
+            gap: 0.5rem;
         }
 
         .checkbox-label {
@@ -215,6 +228,17 @@
         .submit-btn:hover {
             background-color: #1d4ed8;
         }
+
+        @media (max-width: 480px) {
+            .welcome-panel,
+            .form-panel {
+                padding: 1.5rem;
+            }
+
+            .form-extras {
+                flex-wrap: wrap;
+            }
+        }
     </style>
 </head>
 
@@ -226,9 +250,16 @@
         <!-- LEFT BLUE PANEL -->
         <section class="welcome-panel">
             <div>
+
                 <!-- Brand Logo / Name -->
                 <div class="brand-box">
-                    <div class="brand-icon">🩺</div>
+                    <div class="brand-icon">
+                        <img
+                            src="images/babydududocslogo.jpg"
+                            alt="Baby Dudu Docs Logo"
+                        >
+                    </div>
+
                     <span class="brand-name">Baby Dudu Docs</span>
                 </div>
 
@@ -237,7 +268,9 @@
 
                 <!-- Description -->
                 <p class="welcome-desc">
-                    Seamless patient relationship management, appointment scheduling, inquiry resolution, and healthcare staff analytics in one unified platform.
+                    Seamless patient relationship management, appointment scheduling,
+                    inquiry resolution, and healthcare staff analytics in one
+                    unified platform.
                 </p>
             </div>
         </section>
@@ -245,31 +278,38 @@
         <!-- RIGHT FORM PANEL -->
         <section class="form-panel">
 
-            <!-- Title & Subtitle -->
             <h2 class="form-title">Sign in to your account</h2>
-            <p class="form-subtitle">Enter your credentials to access the portal.</p>
+            <p class="form-subtitle">
+                Enter your credentials to access the portal.
+            </p>
 
             <!-- LOGIN FORM -->
             <form onsubmit="handleLogin(event)" class="login-form">
-                
+
                 <!-- Email Field -->
                 <div class="input-group">
-                    <label for="email" class="input-label">Email Address</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        required 
+                    <label for="email" class="input-label">
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        required
                         class="text-input"
                     >
                 </div>
 
                 <!-- Password Field -->
                 <div class="input-group">
-                    <label for="password" class="input-label">Password</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        required 
+                    <label for="password" class="input-label">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        required
                         class="text-input"
                     >
                 </div>
@@ -277,10 +317,19 @@
                 <!-- Remember Me & Forgot Password -->
                 <div class="form-extras">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="remember" class="checkbox-input">
+                        <input
+                            type="checkbox"
+                            id="remember"
+                            class="checkbox-input"
+                        >
                         Remember me
                     </label>
-                    <a href="#" onclick="alert('Password reset link sent.'); return false;" class="forgot-link">
+
+                    <a
+                        href="#"
+                        onclick="alert('Password reset link sent.'); return false;"
+                        class="forgot-link"
+                    >
                         Forgot password?
                     </a>
                 </div>
@@ -289,27 +338,29 @@
                 <button type="submit" class="submit-btn">
                     Sign In
                 </button>
-            </form>
 
+            </form>
         </section>
     </div>
 
-    <!-- JAVASCRIPT HELPERS -->
+    <!-- JAVASCRIPT -->
     <script>
-        
-    function handleLogin(event) {
-        event.preventDefault();
+        function handleLogin(event) {
+            event.preventDefault();
 
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
 
-        if (email === "admin@gmail.com" && password === "password123") {
-            window.location.href = "index.html";
-        } else {
-            alert("Invalid email or password!");
+            if (
+                email === "admin@gmail.com" &&
+                password === "password123"
+            ) {
+                window.location.href = "index.html";
+            } else {
+                alert("Invalid email or password!");
+            }
         }
-    }
-
     </script>
+
 </body>
 </html>
