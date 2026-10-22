@@ -420,7 +420,7 @@
             const rows = [...appData.patients.map(x => ({Type:'Patient', ...x})), ...appData.doctors.map(x => ({Type:'Doctor', ...x})), ...appData.inquiries.map(x => ({Type:'Inquiry', ...x})), ...appData.feedback.map(x => ({Type:'Feedback', ...x}))];
             const csv = [Object.keys(rows[0] || {Type:'Record'}).join(','), ...rows.map(row => Object.values(row).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))].join('\\r\\n');
             const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}), link = document.createElement('a');
-            link.href = URL.createObjectURL(blob); link.download = 'youcare-report.csv'; link.click(); URL.revokeObjectURL(link.href);
+            link.href = URL.createObjectURL(blob); link.download = 'babydududocs-report.csv'; link.click(); URL.revokeObjectURL(link.href);
             showToast('Report downloaded.');
         }
         function exportDataExcel() {
@@ -429,7 +429,7 @@
             [['Patients',appData.patients],['Doctors',appData.doctors],['Inquiries',appData.inquiries],['Feedback',appData.feedback],['Activities',appData.activities]].forEach(([name,rows]) => {
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{Message:'No records available'}]), name);
             });
-            XLSX.writeFile(wb, 'youcare-report.xlsx'); showToast('Excel report downloaded.');
+            XLSX.writeFile(wb, 'babydududocs-report.xlsx'); showToast('Excel report downloaded.');
         }
 
         function saveSettings(){const v={name:document.getElementById('settings-name').value,email:document.getElementById('settings-email').value,phone:document.getElementById('settings-phone').value,language:document.getElementById('settings-language').value,dateFormat:document.getElementById('settings-date').value,timeZone:document.getElementById('settings-timezone').value};localStorage.setItem('youcare_settings',JSON.stringify(v));const name=document.getElementById('current-user-name');if(name)name.textContent=v.name;showToast('Settings saved.');}

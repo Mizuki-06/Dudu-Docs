@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Youcare - Clinic Customer & Appointment Management System</title>
+    <title>Baby Dudu Docs - Clinic Customer & Appointment Management System</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -44,7 +44,7 @@
     <header class="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
         <!-- Logo -->
         <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
-            <img src="babydududocslogo.jpg" alt="Baby Dudu Docs clinic logo" class="w-12 h-12 rounded-full object-cover border border-slate-200 bg-white">
+            <img src="./images/babydududocslogo.jpg" alt="Baby Dudu Docs clinic logo" class="w-12 h-12 rounded-full object-cover border border-slate-200 bg-white">
             <span class="text-lg sm:text-xl font-bold tracking-tight text-slate-900">Baby Dudu Docs</span>
         </div>
 
@@ -356,7 +356,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900">Welcome Back, Sarah!</h1>
-                    <p class="text-slate-500 text-sm">Here is today's overview for Youcare Clinic.</p>
+                    <p class="text-slate-500 text-sm">Here is today's overview for Baby Dudu Docs Clinic.</p>
                 </div>
                 <div class="text-right">
                     <span class="text-xs font-medium text-slate-400">System Status</span>
@@ -705,11 +705,11 @@
     <script>
         // --- 1. INITIAL MOCK DATA STATE ---
         const initialDoctors = [
-            { id: 1, name: 'Dr. Kenneth C. Sibayan', specialty: 'Pediatrics & Breastfeeding Medicine', time: 'MWF, Sat 3–5 PM; TTh 10 AM–12 NN; MWF, Sat 10 AM–12 NN; TTh 3–5 PM (On-Call)', avatar: 'babydududocslogo.jpg' },
-            { id: 2, name: 'Dr. Marj SJ. Sibayan', specialty: 'Breastfeeding and Lactation', time: '2–5 PM; By Appointment & Confirmation', avatar: 'babydududocslogo.jpg' },
-            { id: 3, name: 'Dr. Myleen Manzano', specialty: 'OB-GYN', time: 'Tuesday & Wednesday, 10 AM–12 NN', avatar: 'babydududocslogo.jpg' },
-            { id: 4, name: 'Dr. Clarissa Burgo', specialty: 'OB-GYN / Sonology', time: 'Wednesday & Friday, 1–3 PM; By Appointment', avatar: 'babydududocslogo.jpg' },
-            { id: 5, name: 'Dr. Mark Gabuco', specialty: 'Internal Medicine', time: 'Tuesday & Thursday, 3–5 PM; By Appointment', avatar: 'babydududocslogo.jpg' }
+            { id: 1, name: 'Dr. Kenneth C. Sibayan', specialty: 'Pediatrics & Breastfeeding Medicine', time: 'MWF, Sat 3–5 PM; TTh 10 AM–12 NN; MWF, Sat 10 AM–12 NN; TTh 3–5 PM (On-Call)', avatar: './images/babydududocslogo.jpg' },
+            { id: 2, name: 'Dr. Marj SJ. Sibayan', specialty: 'Breastfeeding and Lactation', time: '2–5 PM; By Appointment & Confirmation', avatar: './images/babydududocslogo.jpg' },
+            { id: 3, name: 'Dr. Myleen Manzano', specialty: 'OB-GYN', time: 'Tuesday & Wednesday, 10 AM–12 NN', avatar: './images/babydududocslogo.jpg' },
+            { id: 4, name: 'Dr. Clarissa Burgo', specialty: 'OB-GYN / Sonology', time: 'Wednesday & Friday, 1–3 PM; By Appointment', avatar: './images/babydududocslogo.jpg' },
+            { id: 5, name: 'Dr. Mark Gabuco', specialty: 'Internal Medicine', time: 'Tuesday & Thursday, 3–5 PM; By Appointment', avatar: './images/babydududocslogo.jpg' }
         ];
 
         const initialPatients = [
@@ -794,21 +794,19 @@
             if (!container) return;
 
             container.innerHTML = appData.doctors.map(doc => `
-                <div class="flex items-center justify-between p-2 rounded-2xl hover:bg-slate-50 transition">
-                    <div class="flex items-center gap-3">
-                        <img src="${doc.avatar}" alt="${doc.name}" class="w-9 h-9 rounded-full object-cover">
-                        <div>
-                            <p class="font-bold text-slate-800 text-xs">${doc.name}</p>
-                            <p class="text-[11px] text-brand-600 font-medium">${doc.specialty}</p>
-                        </div>
+                <article class="doctor-schedule-item">
+                    <img src="${doc.avatar}" alt="" class="doctor-schedule-avatar" loading="lazy">
+                    <div class="doctor-schedule-info">
+                        <p class="doctor-schedule-name">${doc.name}</p>
+                        <p class="doctor-schedule-specialty">${doc.specialty}</p>
                     </div>
-                    <div class="mt-2 flex items-start gap-1.5 text-[10px] leading-relaxed text-slate-500 font-medium">
-                        <i data-lucide="clock" class="w-3 h-3 mt-0.5 flex-shrink-0"></i>
-                        <span class="min-w-0">${doc.time}</span>
+                    <div class="doctor-schedule-hours">
+                        <i data-lucide="clock" aria-hidden="true"></i>
+                        <span>${doc.time}</span>
                     </div>
-                </div>
+                </article>
             `).join('');
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         function renderPatientsTable() {
