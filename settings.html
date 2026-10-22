@@ -672,12 +672,11 @@
             alert("Password changing is not connected to a password-management system yet.");
         }
 
-        function settingsLogout() {
+        async function settingsLogout() {
             if (confirm("Are you sure you want to log out?")) {
-                // Clear temporary session data without deleting saved settings.
+                await db.auth.signOut();
                 sessionStorage.clear();
 
-                // This file must be in the same folder as login.html.
                 window.location.href = "login.html";
             }
         }
@@ -693,6 +692,8 @@
             }
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -40,7 +40,7 @@
 <script>
 // Preserve existing locally saved clinic data after the brand rename.
 (function(){
- const keys = ['youcare_doctors', 'youcare_patients', 'youcare_inquiries', 'youcare_feedback', 'youcare_activities', 'youcare_settings', 'youcare_appearance'];
+ const keys = ['youcare_doctors', 'youcare_inquiries', 'youcare_feedback', 'youcare_activities', 'youcare_settings', 'youcare_appearance'];
  keys.forEach(function(oldKey){
    const newKey = oldKey.replace('youcare_', 'babydududocs_');
    if (localStorage.getItem(newKey) === null && localStorage.getItem(oldKey) !== null) {
@@ -148,59 +148,97 @@
     </main>
     <!-- MODAL 2: Add New Patient Modal -->
     <div id="modal-add-patient" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="font-bold text-slate-800 text-lg">Add New Patient Record</h3>
+                <h3 id="patient-modal-title" class="font-bold text-slate-800 text-lg">Add New Patient Record</h3>
                 <button onclick="closeModal('modal-add-patient')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <form onsubmit="handleAddPatient(event)" class="space-y-4 text-xs">
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Full Name</label>
-                    <input type="text" id="patient-name" required placeholder="e.g. Eleanor Vance" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
+            <form id="patient-form" novalidate onsubmit="handleSavePatient(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="patient-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Email</label>
-                        <input type="email" id="patient-email" required placeholder="patient@example.com" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <label for="patient-name" class="block font-semibold text-slate-700 mb-1">Full Name</label>
+                        <input type="text" id="patient-name" name="full_name" required aria-describedby="patient-name-error" oninput="validatePatientField('patient-name')" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <p id="patient-name-error" class="mt-1 hidden text-rose-600" aria-live="polite"></p>
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Phone</label>
-                        <input type="tel" id="patient-phone" required placeholder="+1 (555) 000-0000" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Age</label>
-                        <input type="number" id="patient-age" required placeholder="28" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <label for="patient-date-of-birth" class="block font-semibold text-slate-700 mb-1">Date of Birth</label>
+                        <input type="date" id="patient-date-of-birth" name="date_of_birth" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Gender</label>
-                        <select id="patient-gender" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none">
+                        <label for="patient-gender" class="block font-semibold text-slate-700 mb-1">Sex</label>
+                        <select id="patient-gender" name="sex" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none">
+                            <option value="">Select sex</option>
                             <option>Female</option>
                             <option>Male</option>
                             <option>Other</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Blood Group</label>
-                        <select id="patient-blood" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none">
-                            <option>O+</option>
-                            <option>A+</option>
-                            <option>B+</option>
-                            <option>AB+</option>
-                            <option>O-</option>
+                        <label for="patient-phone" class="block font-semibold text-slate-700 mb-1">Contact Number</label>
+                        <input type="tel" id="patient-phone" name="contact_number" required inputmode="tel" aria-describedby="patient-phone-error" oninput="validatePatientField('patient-phone')" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <p id="patient-phone-error" class="mt-1 hidden text-rose-600" aria-live="polite"></p>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="patient-email" class="block font-semibold text-slate-700 mb-1">Email</label>
+                        <input type="email" id="patient-email" name="email" aria-describedby="patient-email-error" oninput="validatePatientField('patient-email')" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <p id="patient-email-error" class="mt-1 hidden text-rose-600" aria-live="polite"></p>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="patient-address" class="block font-semibold text-slate-700 mb-1">Address</label>
+                        <textarea id="patient-address" name="address" rows="2" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="patient-allergies" class="block font-semibold text-slate-700 mb-1">Allergies</label>
+                        <textarea id="patient-allergies" name="allergies" rows="2" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="patient-medical-history" class="block font-semibold text-slate-700 mb-1">Medical History</label>
+                        <textarea id="patient-medical-history" name="medical_history" rows="2" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="patient-last-visit" class="block font-semibold text-slate-700 mb-1">Last Visit</label>
+                        <input type="date" id="patient-last-visit" name="last_visit" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label for="patient-status" class="block font-semibold text-slate-700 mb-1">Status</label>
+                        <select id="patient-status" name="status" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="patient-age" class="block font-semibold text-slate-700 mb-1">Age</label>
+                        <input type="text" id="patient-age" name="age" inputmode="numeric" pattern="[0-9]*" aria-describedby="patient-age-error" oninput="validatePatientField('patient-age')" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <p id="patient-age-error" class="mt-1 hidden text-rose-600" aria-live="polite"></p>
+                    </div>
+                    <div>
+                        <label for="patient-blood" class="block font-semibold text-slate-700 mb-1">Blood Group</label>
+                        <select id="patient-blood" name="blood_group" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none">
+                            <option value="">Select blood group</option>
+                            <option>A+</option><option>A-</option>
+                            <option>B+</option><option>B-</option>
+                            <option>AB+</option><option>AB-</option>
+                            <option>O+</option><option>O-</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" onclick="closeModal('modal-add-patient')" class="px-4 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-                    <button type="submit" class="px-5 py-2 rounded-xl font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Save Record</button>
+                    <button id="patient-submit-button" type="submit" class="px-5 py-2 rounded-xl font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Save Record</button>
                 </div>
             </form>
+        </div>
+    </div>
+    <div id="modal-patient-details" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 id="patient-details-title" class="font-bold text-slate-800 text-lg">Patient Details</h3>
+                <button type="button" onclick="closeModal('modal-patient-details')" class="text-slate-400 hover:text-slate-600" aria-label="Close patient details"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <dl id="patient-details-content" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"></dl>
         </div>
     </div>
     <!-- TOAST NOTIFICATION BANNER -->
@@ -208,6 +246,9 @@
         <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
         <span id="toast-message">Action saved successfully!</span>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+    <script src="patients.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

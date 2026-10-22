@@ -229,6 +229,13 @@
             background-color: #1d4ed8;
         }
 
+        .login-error {
+            display: none;
+            color: #b91c1c;
+            font-size: 0.75rem;
+            line-height: 1.5;
+        }
+
         @media (max-width: 480px) {
             .welcome-panel,
             .form-panel {
@@ -340,25 +347,49 @@
                 </button>
 
             </form>
+            <p id="login-error" class="login-error" role="alert"></p>
         </section>
     </div>
 
     <!-- JAVASCRIPT -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
     <script>
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
 
             const email = document.getElementById("email").value.trim();
             const password = document.getElementById("password").value;
+            const button = event.currentTarget.querySelector('button[type="submit"]');
+            const errorMessage = document.getElementById("login-error");
+            button.disabled = true;
+            button.textContent = "Signing in...";
+            errorMessage.style.display = "none";
 
-            if (
-                email === "admin@gmail.com" &&
-                password === "password123"
-            ) {
+            try {
+                const { data, error } = await db.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+
+                if (data.user.app_metadata?.role !== "clinic_staff") {
+                    await db.auth.signOut();
+                    throw new Error("This account is not authorized for the clinic portal.");
+                }
+
                 window.location.href = "index.html";
-            } else {
-                alert("Invalid email or password!");
+            } catch (error) {
+                errorMessage.textContent = error.message || "Sign in failed. Please try again.";
+                errorMessage.style.display = "block";
+            } finally {
+                button.disabled = false;
+                button.textContent = "Sign In";
             }
+        }
+
+        const loginError = new URLSearchParams(window.location.search).get("error");
+        if (loginError === "unauthorized") {
+            const errorMessage = document.getElementById("login-error");
+            errorMessage.textContent = "Sign in with an authorized clinic staff account to access patient records.";
+            errorMessage.style.display = "block";
         }
     </script>
 

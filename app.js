@@ -32,7 +32,9 @@
         // LocalStorage Initialization
         let appData = {
             doctors: (() => { const saved = JSON.parse(localStorage.getItem('babydududocs_doctors') || 'null'); if (!saved) return initialDoctors; return [...initialDoctors.map(d => ({...d, ...(saved.find(s => s.id === d.id) || {}) , name: d.name, specialty: d.specialty, time: d.time, avatar: d.avatar})), ...saved.filter(s => !initialDoctors.some(d => d.id === s.id))]; })(),
-            patients: JSON.parse(localStorage.getItem('babydududocs_patients')) || initialPatients,
+            patients: document.body.dataset.page === 'patients' ? [] : (JSON.parse(localStorage.getItem('babydududocs_patients')) || initialPatients),
+            patientsError: '',
+            patientsLoading: false,
             inquiries: JSON.parse(localStorage.getItem('babydududocs_inquiries')) || initialInquiries,
             feedback: JSON.parse(localStorage.getItem('babydududocs_feedback')) || initialFeedback,
             appointments: JSON.parse(localStorage.getItem('babydududocs_appointments')) || [],
@@ -41,7 +43,6 @@
 
         function saveData() {
             localStorage.setItem('babydududocs_doctors', JSON.stringify(appData.doctors));
-            localStorage.setItem('babydududocs_patients', JSON.stringify(appData.patients));
             localStorage.setItem('babydududocs_inquiries', JSON.stringify(appData.inquiries));
             localStorage.setItem('babydududocs_feedback', JSON.stringify(appData.feedback));
             localStorage.setItem('babydududocs_appointments', JSON.stringify(appData.appointments));
@@ -106,32 +107,109 @@
             const searchVal = (document.getElementById('patient-search-input')?.value || '').toLowerCase();
             if (!tbody) return;
 
+            if (appData.patientsError) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-rose-600">Could not load patient records: ${escapeHtml(appData.patientsError)}</td></tr>`;
+                return;
+            }
+
+            if (appData.patientsLoading && !appData.patients.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-500">Loading patient records...</td></tr>';
+                return;
+            }
+
             const filtered = appData.patients.filter(p => 
-                p.name.toLowerCase().includes(searchVal) || 
-                p.email.toLowerCase().includes(searchVal) ||
-                p.phone.includes(searchVal)
+                [p.full_name, p.email, p.contact_number].some(value =>
+                    String(value || '').toLowerCase().includes(searchVal)
+                )
             );
+
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500">${searchVal ? 'No matching patients found.' : 'No patient records found.'}</td></tr>`;
+                return;
+            }
 
             tbody.innerHTML = filtered.map(p => `
                 <tr class="hover:bg-slate-50/80 transition">
-                    <td class="p-4 flex items-center gap-3">
-                        <img src="${p.avatar}" class="w-8 h-8 rounded-full object-cover">
-                        <span class="font-bold text-slate-800">${p.name}</span>
-                    </td>
+                    <td class="p-4 font-bold text-slate-800">${displayValue(p.full_name)}</td>
                     <td class="p-4">
-                        <p class="font-medium text-slate-700">${p.phone}</p>
-                        <p class="text-slate-400 text-[11px]">${p.email}</p>
+                        <p class="font-medium text-slate-700">${displayValue(p.contact_number)}</p>
+                        <p class="text-slate-400 text-[11px]">${displayValue(p.email)}</p>
                     </td>
-                    <td class="p-4 font-medium">${p.age} Yrs / ${p.gender}</td>
-                    <td class="p-4"><span class="px-2 py-0.5 bg-brand-50 text-brand-700 font-bold rounded-lg">${p.blood}</span></td>
-                    <td class="p-4 text-slate-500 font-medium">${p.lastVisit}</td>
+                    <td class="p-4 font-medium">${p.age === null || p.age === undefined || p.age === '' ? '—' : `${displayValue(p.age)} Yrs`} / ${displayValue(p.sex)}</td>
+                    <td class="p-4"><span class="px-2 py-0.5 bg-brand-50 text-brand-700 font-bold rounded-lg">${displayValue(p.blood_group)}</span></td>
+                    <td class="p-4 text-slate-500 font-medium">${displayValue(p.last_visit)}</td>
                     <td class="p-4 text-right">
-                        <button onclick="quickBookPatient('${p.name}')" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold rounded-xl text-[11px] transition">
-                            Book Visit
+                        <button type="button" onclick="openPatientDetails(${appData.patients.indexOf(p)})" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold rounded-xl text-[11px] transition">
+                            View Details
+                        </button>
+                        <button type="button" onclick="openEditPatient(${appData.patients.indexOf(p)})" class="px-3 py-1 ml-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-[11px] transition" aria-label="Edit ${escapeHtml(p.full_name)}">
+                            Edit
+                        </button>
+                        <button type="button" onclick="deletePatient(${appData.patients.indexOf(p)})" class="px-3 py-1 ml-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-[11px] transition" aria-label="Delete ${escapeHtml(p.full_name)}">
+                            Delete
                         </button>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        function displayValue(value) {
+            return value === null || value === undefined || value === '' ? '—' : escapeHtml(value);
+        }
+
+        function openPatientDetails(index) {
+            const patient = appData.patients[index];
+            const content = document.getElementById('patient-details-content');
+            if (!patient || !content) return;
+
+            const details = [
+                ['Full Name', patient.full_name],
+                ['Date of Birth', patient.date_of_birth],
+                ['Sex', patient.sex],
+                ['Contact Number', patient.contact_number],
+                ['Email', patient.email],
+                ['Address', patient.address],
+                ['Allergies', patient.allergies],
+                ['Medical History', patient.medical_history],
+                ['Last Visit', patient.last_visit],
+                ['Status', patient.status],
+                ['Age', patient.age],
+                ['Blood Group', patient.blood_group]
+            ];
+
+            content.innerHTML = details.map(([label, value]) => `
+                <div class="rounded-xl bg-slate-50 p-3">
+                    <dt class="text-[11px] font-semibold text-slate-500">${label}</dt>
+                    <dd class="mt-1 break-words whitespace-pre-wrap text-sm text-slate-800">${displayValue(value)}</dd>
+                </div>
+            `).join('');
+
+            document.getElementById('patient-details-title').textContent = patient.full_name || 'Patient Details';
+            document.getElementById('modal-patient-details').classList.remove('hidden');
+        }
+
+        async function loadPatientRecords() {
+            const { data: { session }, error: sessionError } = await db.auth.getSession();
+            if (sessionError || !session || session.user.app_metadata?.role !== 'clinic_staff') {
+                if (session) await db.auth.signOut();
+                window.location.replace('login.html?error=unauthorized');
+                return;
+            }
+
+            appData.patientsError = '';
+            appData.patientsLoading = true;
+            renderPatientsTable();
+
+            try {
+                appData.patients = await loadPatients();
+            } catch (error) {
+                appData.patients = [];
+                appData.patientsError = error.message;
+                console.error(error);
+            } finally {
+                appData.patientsLoading = false;
+                renderPatientsTable();
+            }
         }
 
         function renderStaffGrid() {
@@ -241,7 +319,56 @@
         }
 
         function openAddPatientModal() {
+            const form = document.getElementById('patient-form');
+            form?.reset();
+            clearPatientValidation();
+            document.getElementById('patient-id').value = '';
+            document.getElementById('patient-modal-title').textContent = 'Add New Patient Record';
+            document.getElementById('patient-submit-button').textContent = 'Save Record';
             document.getElementById('modal-add-patient')?.classList.remove('hidden');
+        }
+
+        function openEditPatient(index) {
+            const patient = appData.patients[index];
+            const form = document.getElementById('patient-form');
+            if (!patient || !form) return;
+
+            document.getElementById('patient-id').value = patient.id ?? '';
+            document.getElementById('patient-name').value = patient.full_name || '';
+            document.getElementById('patient-date-of-birth').value = String(patient.date_of_birth || '').slice(0, 10);
+            document.getElementById('patient-email').value = patient.email || '';
+            document.getElementById('patient-phone').value = patient.contact_number || '';
+            document.getElementById('patient-age').value = patient.age ?? '';
+            document.getElementById('patient-gender').value = patient.sex || '';
+            document.getElementById('patient-address').value = patient.address || '';
+            document.getElementById('patient-allergies').value = patient.allergies || '';
+            document.getElementById('patient-medical-history').value = patient.medical_history || '';
+            document.getElementById('patient-last-visit').value = String(patient.last_visit || '').slice(0, 10);
+            document.getElementById('patient-status').value = String(patient.status || 'active').toLowerCase();
+            document.getElementById('patient-blood').value = patient.blood_group || '';
+            clearPatientValidation();
+            document.getElementById('patient-modal-title').textContent = 'Edit Patient Record';
+            document.getElementById('patient-submit-button').textContent = 'Save Changes';
+            document.getElementById('modal-add-patient')?.classList.remove('hidden');
+        }
+
+        async function deletePatient(index) {
+            const patient = appData.patients[index];
+            if (!patient || !window.confirm(`Delete the patient record for ${patient.full_name}? This cannot be undone.`)) return;
+            if (patient.id === null || patient.id === undefined) {
+                showToast('Cannot delete this patient because the database record has no ID.');
+                return;
+            }
+
+            try {
+                await deletePatientRecord(patient.id);
+                appData.patients = appData.patients.filter(record => record.id !== patient.id);
+                renderPatientsTable();
+                showToast(`Deleted patient record: ${patient.full_name}`);
+            } catch (error) {
+                console.error(error);
+                showToast(error.message);
+            }
         }
 
         function openAddStaffModal() {
@@ -320,29 +447,123 @@
             showToast(`Appointment booked for ${patient}!`);
         }
 
-        function handleAddPatient(e) {
-            e.preventDefault();
-            const name = document.getElementById('patient-name').value;
-            const email = document.getElementById('patient-email').value;
-            const phone = document.getElementById('patient-phone').value;
-            const age = document.getElementById('patient-age').value;
-            const gender = document.getElementById('patient-gender').value;
-            const blood = document.getElementById('patient-blood').value;
+        function validatePatientField(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            if (!field || !errorElement) return true;
 
-            appData.patients.unshift({
-                id: Date.now(),
-                name, email, phone, age, gender, blood,
-                lastVisit: 'New Patient',
-                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150'
-            });
+            const value = field.value.trim();
+            let message = '';
+            if (fieldId === 'patient-name' && !value) {
+                message = 'Enter the patient’s full name.';
+            } else if (fieldId === 'patient-phone') {
+                if (!value) {
+                    message = 'Enter a contact number.';
+                } else if (!/^\+?[0-9][0-9\s().-]*$/.test(value)) {
+                    message = 'Use numbers only. You may include +, spaces, parentheses, or hyphens.';
+                }
+            } else if (fieldId === 'patient-email' && value &&
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                message = 'Enter a valid email address, including @.';
+            } else if (fieldId === 'patient-age' && value && !/^\d+$/.test(value)) {
+                message = 'Age must contain numbers only.';
+            }
 
-            saveData();
-            closeModal('modal-add-patient');
-            renderPatientsTable();
-            showToast(`Added new patient: ${name}`);
+            errorElement.textContent = message;
+            errorElement.classList.toggle('hidden', !message);
+            field.setAttribute('aria-invalid', String(Boolean(message)));
+            return !message;
         }
 
-        function quickBookPatient(name) {
+        function clearPatientValidation() {
+            ['patient-name', 'patient-phone', 'patient-email', 'patient-age'].forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                const errorElement = document.getElementById(`${fieldId}-error`);
+                field?.removeAttribute('aria-invalid');
+                if (errorElement) {
+                    errorElement.textContent = '';
+                    errorElement.classList.add('hidden');
+                }
+            });
+        }
+
+        async function handleSavePatient(e) {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const submitButton = document.getElementById('patient-submit-button');
+            const fieldsValid = ['patient-name', 'patient-phone', 'patient-email', 'patient-age']
+                .map(validatePatientField)
+                .every(Boolean);
+            if (!fieldsValid) {
+                form.querySelector('[aria-invalid="true"]')?.focus();
+                return;
+            }
+
+            const formData = new FormData(form);
+            const id = document.getElementById('patient-id').value;
+            const patient = {
+                full_name: String(formData.get('full_name') || '').trim(),
+                date_of_birth: formData.get('date_of_birth') || null,
+                sex: formData.get('sex') || null,
+                contact_number: String(formData.get('contact_number') || '').trim(),
+                email: String(formData.get('email') || '').trim() || null,
+                address: String(formData.get('address') || '').trim() || null,
+                allergies: String(formData.get('allergies') || '').trim() || null,
+                medical_history: String(formData.get('medical_history') || '').trim() || null,
+                last_visit: formData.get('last_visit') || null,
+                status: String(formData.get('status') || '').trim() || null,
+                age: formData.get('age') ? Number(formData.get('age')) : null,
+                blood_group: formData.get('blood_group') || null
+            };
+
+            const isEditing = id !== '';
+            if (isEditing && !appData.patients.some(record => String(record.id) === id)) {
+                showToast('Could not find that patient record. Refresh the directory and try again.');
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = isEditing ? 'Saving Changes...' : 'Saving...';
+
+            try {
+                if (isEditing) {
+                    const updatedPatient = await updatePatientRecord(id, patient);
+                    const patientIndex = appData.patients.findIndex(record => String(record.id) === id);
+                    appData.patients[patientIndex] = updatedPatient;
+                } else {
+                    appData.patients.unshift(await registerPatient(patient));
+                }
+
+                appData.patientsError = '';
+                form.reset();
+                clearPatientValidation();
+                document.getElementById('patient-id').value = '';
+                closeModal('modal-add-patient');
+                renderPatientsTable();
+                showToast(isEditing ? `Updated patient record: ${patient.full_name}` : `Added new patient: ${patient.full_name}`);
+            } catch (error) {
+                console.error(error);
+                showToast(error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = document.getElementById('patient-id').value ? 'Save Changes' : 'Save Record';
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
+        }
+
+        function quickBookPatient(index) {
+            const patient = appData.patients[index];
+            if (!patient) return;
+            const name = patient.name;
             window.location.href=`appointments.html?patient=${encodeURIComponent(name)}`;
         }
 
@@ -592,7 +813,13 @@ function logout(){showToast('Log out is a demo action; authentication is not con
                 const patientSelect=document.getElementById('book-patient-select');
                 if(patient&&patientSelect){openNewAppointmentModal();patientSelect.value=patient;}
             } catch (error) { console.error('Quick booking failed:', error); }
-            try { renderPatientsTable(); } catch (error) { console.error('Patient table failed:', error); }
+            try {
+                if (document.body.dataset.page === 'patients') {
+                    loadPatientRecords();
+                } else {
+                    renderPatientsTable();
+                }
+            } catch (error) { console.error('Patient table failed:', error); }
             try { renderStaffGrid(); } catch (error) { console.error('Staff grid failed:', error); }
             try { renderInquiriesAndFeedback(); } catch (error) { console.error('Inquiries failed:', error); }
             try { renderActivityStream(); } catch (error) { console.error('Activity stream failed:', error); }
