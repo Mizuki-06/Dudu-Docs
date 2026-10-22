@@ -258,7 +258,6 @@
                     <input 
                         type="email" 
                         id="email" 
-                        value="reception@gmail.com" 
                         required 
                         class="text-input"
                     >
@@ -270,7 +269,6 @@
                     <input 
                         type="password" 
                         id="password" 
-                        value="password123" 
                         required 
                         class="text-input"
                     >
@@ -305,7 +303,7 @@
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
 
-        if (email === "reception@gmail.com" && password === "password123") {
+        if (email === "admin@gmail.com" && password === "password123") {
             window.location.href = "index.html";
         } else {
             alert("Invalid email or password!");
