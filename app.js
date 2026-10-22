@@ -1,10 +1,10 @@
 // --- 1. INITIAL MOCK DATA STATE ---
         const initialDoctors = [
-            { id: 1, name: 'Dr. Kenneth C. Sibayan', specialty: 'Pediatrics & Breastfeeding Medicine', time: 'MWF, Sat 3–5 PM; TTh 10 AM–12 NN; MWF, Sat 10 AM–12 NN; TTh 3–5 PM (On-Call)', avatar: './images/babydududocslogo.jpg' },
-            { id: 2, name: 'Dr. Marj SJ. Sibayan', specialty: 'Breastfeeding and Lactation', time: '2–5 PM; By Appointment & Confirmation', avatar: './images/babydududocslogo.jpg' },
-            { id: 3, name: 'Dr. Myleen Manzano', specialty: 'OB-GYN', time: 'Tuesday & Wednesday, 10 AM–12 NN', avatar: './images/babydududocslogo.jpg' },
-            { id: 4, name: 'Dr. Clarissa Burgo', specialty: 'OB-GYN / Sonology', time: 'Wednesday & Friday, 1–3 PM; By Appointment', avatar: './images/babydududocslogo.jpg' },
-            { id: 5, name: 'Dr. Mark Gabuco', specialty: 'Internal Medicine', time: 'Tuesday & Thursday, 3–5 PM; By Appointment', avatar: './images/babydududocslogo.jpg' }
+            { id: 1, name: 'Dr. Kenneth C. Sibayan', specialty: 'Pediatrics & Breastfeeding Medicine', services:['Pediatric consultation','Breastfeeding and lactation consultation'], time: 'MWF, Sat 3–5 PM; TTh 10 AM–12 NN; MWF, Sat 10 AM–12 NN; TTh 3–5 PM (On-Call)', availability: [{days:[1,2,3,4,5,6],start:'10:00',end:'12:00'},{days:[1,2,3,4,5,6],start:'15:00',end:'17:00'}], avatar: './images/babydududocslogo.jpg' },
+            { id: 2, name: 'Dr. Marj SJ. Sibayan', specialty: 'Breastfeeding and Lactation', services:['Breastfeeding and lactation consultation'], time: '2–5 PM; By Appointment & Confirmation', availability: [{days:[0,1,2,3,4,5,6],start:'14:00',end:'17:00'}], avatar: './images/babydududocslogo.jpg' },
+            { id: 3, name: 'Dr. Myleen Manzano', specialty: 'OB-GYN', services:['OB-GYN consultation','Prenatal consultation'], time: 'Tuesday & Wednesday, 10 AM–12 NN', availability: [{days:[2,3],start:'10:00',end:'12:00'}], avatar: './images/babydududocslogo.jpg' },
+            { id: 4, name: 'Dr. Clarissa Burgo', specialty: 'OB-GYN / Sonology', services:['OB-GYN consultation','Ultrasound / sonology'], time: 'Wednesday & Friday, 1–3 PM; By Appointment', availability: [{days:[3,5],start:'13:00',end:'15:00'}], avatar: './images/babydududocslogo.jpg' },
+            { id: 5, name: 'Dr. Mark Gabuco', specialty: 'Internal Medicine', services:['Internal medicine consultation'], time: 'Tuesday & Thursday, 3–5 PM; By Appointment', availability: [{days:[2,4],start:'15:00',end:'17:00'}], avatar: './images/babydududocslogo.jpg' }
         ];
 
         const initialPatients = [
@@ -289,25 +289,32 @@
 
         // --- 4. MODAL & INTERACTION HANDLERS ---
         function openEditScheduleModal(id) {
-            const modal = document.getElementById('edit-schedule-popover');
-            if (modal) {
-                modal.classList.remove('hidden');
-            }
-        }
-
-        function closeEditScheduleModal() {
-            document.getElementById('edit-schedule-popover')?.classList.add('hidden');
-        }
-
-        function saveEditSchedule() {
-            closeEditScheduleModal();
-            showToast("Schedule updated successfully!");
+            const appointment=appData.appointments.find(item=>String(item.id)===String(id));
+            const form=document.querySelector('#modal-book-appointment form');
+            if(!appointment||!form)return;
+            populateSelects();
+            form.reset();
+            document.getElementById('book-appointment-id').value=String(appointment.id);
+            document.getElementById('book-patient-select').value=appointment.patient;
+            document.getElementById('book-doctor-select').value=appointment.doctor;
+            populateServiceTypes(appointment.service);
+            document.getElementById('book-date').value=appointment.date;
+            document.getElementById('book-date').min='';
+            refreshAppointmentTimeSlots(appointment.id);
+            document.getElementById('book-time').value=appointment.time;
+            document.getElementById('book-notes').value=appointment.notes||'';
+            document.getElementById('book-appointment-modal-title').textContent='Edit Appointment';
+            document.getElementById('book-appointment-submit').textContent='Save Changes';
+            document.getElementById('modal-book-appointment')?.classList.remove('hidden');
         }
 
         function openNewAppointmentModal() {
             populateSelects();
             const form=document.querySelector('#modal-book-appointment form');
             form?.reset();
+            document.getElementById('book-appointment-id').value='';
+            document.getElementById('book-appointment-modal-title').textContent='Book New Appointment';
+            document.getElementById('book-appointment-submit').textContent='Confirm Booking';
             const dateInput=document.getElementById('book-date');
             if(dateInput){
                 const today=dateKey(new Date());
@@ -315,6 +322,7 @@
                 dateInput.value=selectedDate>=today?selectedDate:today;
                 dateInput.min=today;
             }
+            refreshAppointmentTimeSlots();
             document.getElementById('modal-book-appointment')?.classList.remove('hidden');
         }
 
@@ -413,10 +421,126 @@
                     doctorSel.append(option);
                 }
             }
+            populateServiceTypes();
+        }
+
+        function getDoctorServices(doctor) {
+            if(Array.isArray(doctor?.services)&&doctor.services.length)return doctor.services;
+            const specialty=String(doctor?.specialty||'').toLowerCase();
+            if(specialty.includes('pediatric')&&specialty.includes('breastfeeding'))return ['Pediatric consultation','Breastfeeding and lactation consultation'];
+            if(specialty.includes('breastfeeding')||specialty.includes('lactation'))return ['Breastfeeding and lactation consultation'];
+            if(specialty.includes('sonology'))return ['OB-GYN consultation','Ultrasound / sonology'];
+            if(specialty.includes('ob-gyn'))return ['OB-GYN consultation','Prenatal consultation'];
+            if(specialty.includes('internal medicine'))return ['Internal medicine consultation'];
+            return doctor?.specialty?[`${doctor.specialty} consultation`]:[];
+        }
+
+        function populateServiceTypes(selectedService='') {
+            const serviceSelect=document.getElementById('book-service-type');
+            if(!serviceSelect)return;
+            const doctorName=document.getElementById('book-doctor-select')?.value||'';
+            const doctor=appData.doctors.find(item=>item.name===doctorName);
+            const services=getDoctorServices(doctor);
+            serviceSelect.replaceChildren();
+            services.forEach(service=>{
+                const option=document.createElement('option');
+                option.value=service;
+                option.textContent=service;
+                serviceSelect.append(option);
+            });
+            if(selectedService&&!services.includes(selectedService)){
+                const legacyOption=document.createElement('option');
+                legacyOption.value=selectedService;
+                legacyOption.textContent=`${selectedService} (existing appointment)`;
+                serviceSelect.append(legacyOption);
+            }
+            serviceSelect.value=selectedService&&[...serviceSelect.options].some(option=>option.value===selectedService)
+                ?selectedService
+                :services[0]||'';
+        }
+
+        function formatAppointmentTime(minutes) {
+            const hour=Math.floor(minutes/60);
+            const minute=minutes%60;
+            const period=hour<12?'AM':'PM';
+            const displayHour=hour%12||12;
+            return `${String(displayHour).padStart(2,'0')}:${String(minute).padStart(2,'0')} ${period}`;
+        }
+
+        function getAppointmentTimeRange(time) {
+            const matches=[...String(time||'').matchAll(/(\d{1,2}):(\d{2})\s*(AM|PM)/gi)];
+            if(!matches.length)return null;
+            const toMinutes=match=>{
+                const hour=Number(match[1])%12;
+                return hour*60+Number(match[2])+(match[3].toUpperCase()==='PM'?720:0);
+            };
+            const start=toMinutes(matches[0]);
+            let end=matches.length>1?toMinutes(matches[1]):start+60;
+            if(matches.length>1&&end<=start)end+=24*60;
+            return end>start?{start,end}:null;
+        }
+
+        function getAppointmentStartDate(date,time) {
+            const range=getAppointmentTimeRange(time);
+            if(!range)return null;
+            const [year,month,day]=String(date||'').split('-').map(Number);
+            if(!year||!month||!day)return null;
+            return new Date(year,month-1,day,Math.floor(range.start/60),range.start%60);
+        }
+
+        function isAppointmentAtLeastOneHourAhead(date,time) {
+            const start=getAppointmentStartDate(date,time);
+            return Boolean(start&&start.getTime()-Date.now()>=60*60*1000);
+        }
+
+        function getAvailableAppointmentSlots(doctorName,date,excludeId='') {
+            const doctor=appData.doctors.find(item=>item.name===doctorName);
+            if(!doctor||!date||!Array.isArray(doctor.availability))return [];
+            const weekday=new Date(`${date}T00:00:00`).getDay();
+            const slots=new Set();
+            doctor.availability.filter(schedule=>schedule.days.includes(weekday)).forEach(schedule=>{
+                const [startHour,startMinute]=schedule.start.split(':').map(Number);
+                const [endHour,endMinute]=schedule.end.split(':').map(Number);
+                for(let start=startHour*60+startMinute;start+60<=endHour*60+endMinute;start+=60){
+                    const slot=`${formatAppointmentTime(start)} - ${formatAppointmentTime(start+60)}`;
+                    if(!isAppointmentAtLeastOneHourAhead(date,slot))continue;
+                    const range=getAppointmentTimeRange(slot);
+                    const overlapsExisting=appData.appointments.some(appointment=>{
+                        if(String(appointment.id)===String(excludeId)||appointment.doctor!==doctorName||appointment.date!==date)return false;
+                        const existingRange=getAppointmentTimeRange(appointment.time);
+                        return Boolean(range&&existingRange&&range.start<existingRange.end&&existingRange.start<range.end);
+                    });
+                    if(!overlapsExisting)slots.add(slot);
+                }
+            });
+            return [...slots];
+        }
+
+        function refreshAppointmentTimeSlots(excludeId='') {
+            const timeSelect=document.getElementById('book-time');
+            const doctorName=document.getElementById('book-doctor-select')?.value||'';
+            const date=document.getElementById('book-date')?.value||'';
+            if(!timeSelect)return;
+            const slots=getAvailableAppointmentSlots(doctorName,date,excludeId);
+            timeSelect.replaceChildren();
+            if(!slots.length){
+                const option=document.createElement('option');
+                option.value='';
+                option.textContent=doctorName&&date?'No available times for this doctor on this date':'Select a doctor and date first';
+                timeSelect.append(option);
+                return;
+            }
+            slots.forEach(slot=>{
+                const option=document.createElement('option');
+                option.value=slot;
+                option.textContent=slot;
+                timeSelect.append(option);
+            });
         }
 
         function handleBookAppointment(e) {
             e.preventDefault();
+            const appointmentId=document.getElementById('book-appointment-id').value;
             const patient = document.getElementById('book-patient-select').value;
             const doctor = document.getElementById('book-doctor-select').value;
             const service = document.getElementById('book-service-type').value;
@@ -427,14 +551,34 @@
                 showToast('Complete all required appointment details.');
                 return;
             }
+            const currentAppointment=appData.appointments.find(item=>String(item.id)===appointmentId);
+            if(!getDoctorServices(appData.doctors.find(item=>item.name===doctor)).includes(service)&&currentAppointment?.service!==service){
+                showToast('Choose a service offered by the selected doctor.');
+                populateServiceTypes(currentAppointment?.service||'');
+                return;
+            }
+            if(!getAvailableAppointmentSlots(doctor,date,appointmentId).includes(time)){
+                refreshAppointmentTimeSlots(appointmentId);
+                showToast('That time is unavailable or is less than one hour away. Choose an available slot at least one hour ahead.');
+                return;
+            }
             const appointment={id:Date.now(),patient,doctor,service,date,time,notes,status:'Scheduled'};
-            appData.appointments.unshift(appointment);
-            
-            appData.activities.unshift({
-                user: 'Sarah Jenkins',
-                action: `Booked ${patient} for ${service} with ${doctor} on ${date}`,
-                time: 'Just now'
-            });
+            if(appointmentId){
+                const index=appData.appointments.findIndex(item=>String(item.id)===appointmentId);
+                if(index===-1){
+                    showToast('Could not find that appointment. Refresh the calendar and try again.');
+                    return;
+                }
+                appointment.id=appData.appointments[index].id;
+                appData.appointments[index]=appointment;
+            }else{
+                appData.appointments.unshift(appointment);
+                appData.activities.unshift({
+                    user: 'Sarah Jenkins',
+                    action: `Booked ${patient} for ${service} with ${doctor} on ${date}`,
+                    time: 'Just now'
+                });
+            }
 
             saveData();
             const [year,month,day]=date.split('-').map(Number);
@@ -444,7 +588,22 @@
             closeModal('modal-book-appointment');
             document.querySelector('#modal-book-appointment form')?.reset();
             renderActivityStream();
-            showToast(`Appointment booked for ${patient}!`);
+            showToast(appointmentId?`Appointment updated for ${patient}.`:`Appointment booked for ${patient}!`);
+        }
+
+        function deleteAppointment(id) {
+            const appointment=appData.appointments.find(item=>String(item.id)===String(id));
+            if(!appointment)return;
+            const start=getAppointmentStartDate(appointment.date,appointment.time);
+            if(start&&Math.abs(start.getTime()-Date.now())<=30*60*1000){
+                showToast('Appointments cannot be deleted within 30 minutes of their scheduled time.');
+                return;
+            }
+            if(!window.confirm(`Delete the appointment for ${appointment.patient} on ${appointment.date}? This cannot be undone.`))return;
+            appData.appointments=appData.appointments.filter(item=>String(item.id)!==String(id));
+            saveData();
+            renderMiniCalendar();
+            showToast('Appointment deleted.');
         }
 
         function validatePatientField(fieldId) {
@@ -594,6 +753,74 @@
             link.href = URL.createObjectURL(blob); link.download = 'babydududocs-report.csv'; link.click(); URL.revokeObjectURL(link.href);
             showToast('Report downloaded.');
         }
+
+        function exportAppointmentsExcel() {
+            if (typeof XLSX === 'undefined') {
+                showToast('Excel library did not load. Check your internet connection and try again.');
+                return;
+            }
+            const today=new Date();
+            const weekStart=new Date(today.getFullYear(),today.getMonth(),today.getDate()-((today.getDay()+6)%7));
+            const weekEnd=new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()+7);
+            const weekStartKey=dateKey(weekStart);
+            const weekEndKey=dateKey(weekEnd);
+            const appointments=appData.appointments.filter(appointment=>
+                appointment.date>=weekStartKey&&appointment.date<weekEndKey
+            ).sort((a,b)=>
+                a.date.localeCompare(b.date)||
+                (getAppointmentTimeRange(a.time)?.start??0)-(getAppointmentTimeRange(b.time)?.start??0)||
+                String(a.patient).localeCompare(String(b.patient))
+            );
+            const headers=['Date','Time','Doctor','Patient','Service Type'];
+            const rows=appointments.map(appointment=>[
+                appointment.date,
+                appointment.time,
+                appointment.doctor,
+                appointment.patient,
+                appointment.service
+            ]);
+            const appointmentSheet=XLSX.utils.aoa_to_sheet([headers,...rows]);
+            appointmentSheet['!cols']=[
+                {wch:14},{wch:27},{wch:32},{wch:24},{wch:36}
+            ];
+            appointmentSheet['!autofilter']={ref:`A1:E${Math.max(rows.length+1,1)}`};
+            appointmentSheet['!freeze']={
+                xSplit:0,
+                ySplit:1,
+                topLeftCell:'A2',
+                activePane:'bottomLeft',
+                state:'frozen'
+            };
+
+            const summarySheet=XLSX.utils.aoa_to_sheet([
+                ['Baby Dudu Docs — Weekly Appointment Report'],
+                ['Week',`${formatCalendarDate(weekStartKey)} – ${formatCalendarDate(dateKey(new Date(weekEnd.getFullYear(),weekEnd.getMonth(),weekEnd.getDate()-1)))}`],
+                ['Generated',new Date().toLocaleString()],
+                [],
+                ['This Week Summary','Count'],
+                ['Total appointments',appointments.length],
+                ['Scheduled',appointments.filter(item=>(item.status||'Scheduled')==='Scheduled').length],
+                ['Completed',appointments.filter(item=>item.status==='Completed').length],
+                ['Cancelled',appointments.filter(item=>item.status==='Cancelled').length],
+                ['Doctors with appointments',new Set(appointments.map(item=>item.doctor)).size]
+            ]);
+            summarySheet['!cols']=[{wch:34},{wch:24}];
+            summarySheet['!merges']=[{s:{r:0,c:0},e:{r:0,c:1}}];
+            summarySheet['!freeze']={
+                xSplit:0,
+                ySplit:5,
+                topLeftCell:'A6',
+                activePane:'bottomLeft',
+                state:'frozen'
+            };
+
+            const workbook=XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook,summarySheet,'Summary');
+            XLSX.utils.book_append_sheet(workbook,appointmentSheet,'Appointments');
+            XLSX.writeFile(workbook,'babydududocs-weekly-appointments.xlsx');
+            showToast('This week’s appointment Excel report downloaded.');
+        }
+
         function exportDataExcel() {
             if (typeof XLSX === 'undefined') { showToast('Excel library did not load. Check your internet connection.'); return; }
             const wb = XLSX.utils.book_new();
@@ -679,13 +906,44 @@ function logout(){showToast('Log out is a demo action; authentication is not con
         // Calendar dates use the browser's local date (not hard-coded sample dates).
         let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         let selectedCalendarDate = new Date();
+        let appliedAppointmentFilters = {from:'',to:'',doctor:'',view:'all'};
         function dateKey(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; }
+        function getFilteredAppointments() {
+            const {from,to,doctor,view}=appliedAppointmentFilters;
+            const today=dateKey(new Date());
+            const query=(document.getElementById('appointment-search')?.value||'').trim().toLowerCase();
+            return appData.appointments.filter(appointment=>
+                (!from||appointment.date>=from)&&
+                (!to||appointment.date<=to)&&
+                (!doctor||appointment.doctor===doctor)&&
+                (view==='all'||(view==='today'?appointment.date===today:appointment.date>today))&&
+                (!query||`${appointment.patient} ${appointment.doctor} ${appointment.service} ${appointment.notes||''}`.toLowerCase().includes(query))
+            );
+        }
+
+        function createAppointmentActions(appointment) {
+            const actions=document.createElement('div');
+            actions.className='mt-2 flex flex-wrap justify-end gap-1';
+            const edit=document.createElement('button');
+            edit.type='button';
+            edit.className='rounded-lg border border-slate-200 px-1.5 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50';
+            edit.textContent='Edit';
+            edit.addEventListener('click',()=>openEditScheduleModal(appointment.id));
+            const remove=document.createElement('button');
+            remove.type='button';
+            remove.className='rounded-lg border border-rose-200 px-1.5 py-1 text-[10px] font-semibold text-rose-700 hover:bg-rose-50';
+            remove.textContent='Delete';
+            remove.addEventListener('click',()=>deleteAppointment(appointment.id));
+            actions.append(edit,remove);
+            return actions;
+        }
+
         function renderBookedAppointments() {
             const list=document.getElementById('booked-appointments-list');
             if(!list)return;
             const dateLabel=document.getElementById('booked-appointments-date');
             if(dateLabel)dateLabel.textContent=selectedCalendarDate.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-            const appointments=appData.appointments.filter(appointment=>appointment.date===dateKey(selectedCalendarDate));
+            const appointments=getFilteredAppointments().filter(appointment=>appointment.date===dateKey(selectedCalendarDate));
             list.replaceChildren();
             if(!appointments.length){
                 const empty=document.createElement('p');
@@ -718,9 +976,69 @@ function logout(){showToast('Log out is a demo action; authentication is not con
                     notes.textContent=appointment.notes;
                     card.append(notes);
                 }
+                card.append(createAppointmentActions(appointment));
                 list.append(card);
             });
         }
+
+        function appointmentStartHour(appointment) {
+            const range=getAppointmentTimeRange(appointment.time);
+            return range?Math.floor(range.start/60):null;
+        }
+
+        function renderScheduleGrid() {
+            const grid=document.getElementById('interactive-schedule-grid');
+            if(!grid)return;
+            const mode=document.getElementById('calendar-view-type')?.value||'Weekly';
+            const weekStart=new Date(selectedCalendarDate);
+            weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
+            const dates=mode==='Daily'
+                ? [new Date(selectedCalendarDate)]
+                : Array.from({length:7},(_,index)=>new Date(weekStart.getFullYear(),weekStart.getMonth(),weekStart.getDate()+index));
+            const visibleAppointments=getFilteredAppointments().filter(appointment=>dates.some(date=>dateKey(date)===appointment.date));
+            const columns=dates.length===1?'grid-cols-2':'grid-cols-8';
+            const rows=[];
+            for(let hour=8;hour<=17;hour++){
+                const label=new Date(2000,0,1,hour).toLocaleTimeString(undefined,{hour:'2-digit',hour12:true});
+                const cells=dates.map(date=>{
+                    const appointments=visibleAppointments.filter(appointment=>
+                        appointment.date===dateKey(date)&&appointmentStartHour(appointment)===hour
+                    );
+                    const cell=document.createElement('div');
+                    cell.className='min-w-0 border-l border-slate-100 px-1 py-1 space-y-1';
+                    appointments.forEach((appointment,index)=>{
+                        const card=document.createElement('article');
+                        const colors=[
+                            'bg-purple-50 border-purple-200 text-purple-900',
+                            'bg-emerald-50 border-emerald-200 text-emerald-900',
+                            'bg-amber-50 border-amber-200 text-amber-900',
+                            'bg-rose-50 border-rose-200 text-rose-900',
+                            'bg-brand-50 border-brand-200 text-brand-900'
+                        ];
+                        card.className=`rounded-lg border p-1.5 ${colors[index%colors.length]}`;
+                        const service=document.createElement('p');
+                        service.className='truncate font-bold';
+                        service.textContent=appointment.service;
+                        service.title=appointment.service;
+                        const patient=document.createElement('p');
+                        patient.className='truncate text-[10px]';
+                        patient.textContent=appointment.patient;
+                        card.append(service,patient,createAppointmentActions(appointment));
+                        cell.append(card);
+                    });
+                    return cell;
+                });
+                const row=document.createElement('div');
+                row.className=`grid ${columns} min-h-24 items-start border-b border-slate-100`;
+                const time=document.createElement('span');
+                time.className='pt-2 text-center font-medium text-slate-400';
+                time.textContent=label;
+                row.append(time,...cells);
+                rows.push(row);
+            }
+            grid.replaceChildren(...rows);
+        }
+
         function formatCalendarDate(value) { const [year,month,day]=value.split('-').map(Number); return new Date(year,month-1,day).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
         function renderScheduleCalendarHeader() {
             const mode=document.getElementById('calendar-view-type')?.value||'Weekly';
@@ -737,21 +1055,17 @@ function logout(){showToast('Log out is a demo action; authentication is not con
             const weekHeader=document.getElementById('schedule-week-header');
             if(weekHeader){
                 const labels=['MON','TUE','WED','THU','FRI','SAT','SUN'];
+                weekHeader.className=`grid ${mode==='Daily'?'grid-cols-2':'grid-cols-8'} text-xs font-semibold text-slate-500 text-center pb-3 border-b border-slate-100`;
                 weekHeader.innerHTML='<div class="text-slate-400">GMT+8</div>'+labels.map((label,i)=>{
                     const date=new Date(start);
                     date.setDate(start.getDate()+i);
                     const active=dateKey(date)===dateKey(selectedCalendarDate);
-                    return `<div class="${active?'text-brand-600 font-bold':''}">${label} ${date.getDate()}</div>`;
+                    return mode==='Daily'?(active?`<div class="text-brand-600 font-bold">${date.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}</div>`:''):`<div class="${active?'text-brand-600 font-bold':''}">${label} ${date.getDate()}</div>`;
                 }).join('');
-                if(mode==='Daily'){
-                    weekHeader.innerHTML='<div class="text-slate-400">GMT+8</div>'+`<div class="col-span-7 text-brand-600 font-bold">${selectedCalendarDate.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}</div>`;
-                }
             }
             const period=document.getElementById('schedule-calendar-period');
             if(period){
-                const view=document.getElementById('appointment-filter-view')?.value||'all';
-                const from=document.getElementById('appointment-filter-from')?.value||'';
-                const to=document.getElementById('appointment-filter-to')?.value||'';
+                const {view,from,to}=appliedAppointmentFilters;
                 period.textContent=from||to
                     ? `${from?formatCalendarDate(from):'...'} – ${to?formatCalendarDate(to):'...'}`
                     : view==='today'?'Today':view==='upcoming'?'Upcoming':'All schedule items';
@@ -771,18 +1085,51 @@ function logout(){showToast('Log out is a demo action; authentication is not con
             const offset = (first.getDay()+6)%7; // Monday-first calendar
             const days = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+1, 0).getDate();
             const prevDays = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 0).getDate();
-            const cells=[]; for(let i=0;i<42;i++){ let day, d, other=false; if(i<offset){day=prevDays-offset+i+1;d=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,day);other=true;} else if(i>=offset+days){day=i-offset-days+1;d=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,day);other=true;} else {day=i-offset+1;d=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),day);} const selected=dateKey(d)===dateKey(selectedCalendarDate); const today=dateKey(d)===dateKey(new Date()); cells.push(`<button type="button" data-calendar-date="${dateKey(d)}" onclick="selectCalendarDate(this.dataset.calendarDate)" class="mx-auto flex h-7 w-7 items-center justify-center rounded-full ${selected?'bg-brand-600 text-white font-bold shadow-sm':today?'border border-brand-600 text-brand-700':other?'text-slate-300':'hover:bg-slate-100'}" aria-label="${d.toLocaleDateString()}">${day}</button>`); }
+            const cells=[];
+            for(let i=0;i<42;i++){
+                let day,date,other=false;
+                if(i<offset){
+                    day=prevDays-offset+i+1;
+                    date=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,day);
+                    other=true;
+                }else if(i>=offset+days){
+                    day=i-offset-days+1;
+                    date=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,day);
+                    other=true;
+                }else{
+                    day=i-offset+1;
+                    date=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),day);
+                }
+                const value=dateKey(date);
+                const selected=value===dateKey(selectedCalendarDate);
+                const today=value===dateKey(new Date());
+                const appointmentCount=appData.appointments.filter(appointment=>appointment.date===value).length;
+                const colorClass=selected
+                    ? 'bg-brand-600 text-white font-bold shadow-sm'
+                    : today
+                        ? 'border border-brand-600 text-brand-700'
+                        : other
+                            ? 'text-slate-300'
+                            : 'hover:bg-slate-100';
+                const marker=appointmentCount
+                    ? `<span class="absolute bottom-0.5 h-1 w-1 rounded-full ${selected?'bg-white':'bg-brand-600'}" aria-hidden="true"></span>`
+                    : '';
+                const label=`${date.toLocaleDateString()}${appointmentCount?`, ${appointmentCount} appointment${appointmentCount===1?'':'s'}`:''}`;
+                cells.push(`<button type="button" data-calendar-date="${value}" onclick="selectCalendarDate(this.dataset.calendarDate)" class="relative mx-auto flex h-7 w-7 items-center justify-center rounded-full ${colorClass}" aria-label="${label}">${day}${marker}</button>`);
+            }
             grid.innerHTML=cells.join('');
             renderScheduleCalendarHeader();
+            renderScheduleGrid();
             renderBookedAppointments();
         }
         function changeCalendarMonth(delta){calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+delta,1); selectedCalendarDate=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),Math.min(selectedCalendarDate.getDate(),new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,0).getDate())); renderMiniCalendar();}
         function shiftScheduleDate(delta){const mode=document.getElementById('calendar-view-type')?.value||'Weekly';if(mode==='Monthly'){changeCalendarMonth(delta<0?-1:1);return;}selectedCalendarDate=new Date(selectedCalendarDate);selectedCalendarDate.setDate(selectedCalendarDate.getDate()+(mode==='Daily'?(delta<0?-1:1):delta));calendarMonth=new Date(selectedCalendarDate.getFullYear(),selectedCalendarDate.getMonth(),1);renderMiniCalendar();}
-        function selectCalendarDate(value){const [y,m,d]=value.split('-').map(Number);selectedCalendarDate=new Date(y,m-1,d);calendarMonth=new Date(y,m-1,1);renderMiniCalendar();const from=document.getElementById('appointment-filter-from');if(from)from.value=value;const to=document.getElementById('appointment-filter-to');if(to)to.value=value;}
+        function selectCalendarDate(value){const [y,m,d]=value.split('-').map(Number);selectedCalendarDate=new Date(y,m-1,d);calendarMonth=new Date(y,m-1,1);renderMiniCalendar();}
         function toggleAppointmentFilters(){const panel=document.getElementById('appointment-filter-panel'),btn=document.getElementById('appointment-filter-toggle');if(!panel||!btn)return;const opening=panel.classList.contains('hidden');panel.classList.toggle('hidden');btn.setAttribute('aria-expanded',String(opening));}
         function applyAppointmentFilters(){
             const from=document.getElementById('appointment-filter-from')?.value||''; const to=document.getElementById('appointment-filter-to')?.value||''; const doctor=document.getElementById('appointment-filter-doctor')?.value||''; const view=document.getElementById('appointment-filter-view')?.value||'all';
             if(from&&to&&from>to){showToast('The start date must be before the end date.');return;}
+            appliedAppointmentFilters={from,to,doctor,view};
             const count=[from,to,doctor,view!=='all'?view:''].filter(Boolean).length;const badge=document.getElementById('appointment-filter-count');if(badge){badge.textContent=count;badge.classList.toggle('hidden',!count);}
             const message=document.getElementById('appointment-filter-message');if(message)message.textContent=`Filters applied${doctor?' for '+doctor:''}${from?' from '+from:''}${to?' to '+to:''}. Calendar dates now reflect the selected range.`;
             const focusDate=from||to||(view==='today'?dateKey(new Date()):view==='upcoming'?dateKey(new Date(Date.now()+86400000)):'');
@@ -792,8 +1139,8 @@ function logout(){showToast('Log out is a demo action; authentication is not con
             const events=document.querySelectorAll('#interactive-schedule-grid [data-doctor]');events.forEach(el=>{el.classList.toggle('hidden',!!doctor&&el.dataset.doctor!==doctor);});document.querySelectorAll('#doctor-list-container .doctor-schedule-item').forEach(el=>{const name=el.querySelector('.doctor-schedule-name')?.textContent.trim()||'';el.classList.toggle('hidden',!!doctor&&name!==doctor);});
             showToast('Appointment filters applied.');
         }
-        function resetAppointmentFilters(){['appointment-filter-from','appointment-filter-to','appointment-filter-doctor'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});const view=document.getElementById('appointment-filter-view');if(view)view.value='all';const badge=document.getElementById('appointment-filter-count');if(badge){badge.textContent='0';badge.classList.add('hidden');}const msg=document.getElementById('appointment-filter-message');if(msg)msg.textContent='Filters cleared.';document.querySelectorAll('#interactive-schedule-grid [data-doctor], #doctor-list-container .doctor-schedule-item').forEach(el=>el.classList.remove('hidden'));selectedCalendarDate=new Date();calendarMonth=new Date(selectedCalendarDate.getFullYear(),selectedCalendarDate.getMonth(),1);renderMiniCalendar();}
-        function filterAppointments(){const q=(document.getElementById('appointment-search')?.value||'').trim().toLowerCase();document.querySelectorAll('#interactive-schedule-grid [onclick*="openEditScheduleModal"]').forEach(el=>{el.classList.toggle('hidden',!!q&&!el.textContent.toLowerCase().includes(q));});}
+        function resetAppointmentFilters(){['appointment-filter-from','appointment-filter-to','appointment-filter-doctor'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});const view=document.getElementById('appointment-filter-view');if(view)view.value='all';appliedAppointmentFilters={from:'',to:'',doctor:'',view:'all'};const badge=document.getElementById('appointment-filter-count');if(badge){badge.textContent='0';badge.classList.add('hidden');}const msg=document.getElementById('appointment-filter-message');if(msg)msg.textContent='Filters cleared.';document.querySelectorAll('#interactive-schedule-grid [data-doctor], #doctor-list-container .doctor-schedule-item').forEach(el=>el.classList.remove('hidden'));selectedCalendarDate=new Date();calendarMonth=new Date(selectedCalendarDate.getFullYear(),selectedCalendarDate.getMonth(),1);renderMiniCalendar();}
+        function filterAppointments(){renderMiniCalendar();}
         function initAppointmentControls(){
             const doctorSelect=document.getElementById('appointment-filter-doctor');if(doctorSelect){const allDoctors=document.createElement('option');allDoctors.value='';allDoctors.textContent='All doctors';doctorSelect.replaceChildren(allDoctors);appData.doctors.forEach(doctor=>{const option=document.createElement('option');option.value=doctor.name;option.textContent=doctor.name;doctorSelect.append(option);});}
             const dateInput=document.getElementById('book-date');if(dateInput){const today=dateKey(new Date());dateInput.min=today;if(!dateInput.value)dateInput.value=today;}
