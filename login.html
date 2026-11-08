@@ -1,8 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Baby Dudu Docs - Log In</title>
 
     <style>
@@ -175,6 +178,46 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
+        /* PASSWORD FIELD */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-wrapper .text-input {
+            padding-right: 2.8rem;
+        }
+
+        /* SHOW / HIDE PASSWORD BUTTON */
+        .toggle-password {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem;
+            transition: color 0.2s ease;
+        }
+
+        .toggle-password:hover {
+            color: #2563eb;
+        }
+
+        .toggle-password:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 3px;
+            border-radius: 4px;
+        }
+
+        /* FORM EXTRAS */
         .form-extras {
             display: flex;
             align-items: center;
@@ -198,6 +241,7 @@
             border-radius: 0.25rem;
             border: 1px solid #cbd5e1;
             accent-color: #2563eb;
+            cursor: pointer;
         }
 
         .forgot-link {
@@ -210,6 +254,7 @@
             text-decoration: underline;
         }
 
+        /* SIGN IN BUTTON */
         .submit-btn {
             width: 100%;
             height: 2.75rem;
@@ -229,11 +274,18 @@
             background-color: #1d4ed8;
         }
 
+        .submit-btn:disabled {
+            background-color: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        /* ERROR MESSAGE */
         .login-error {
             display: none;
             color: #b91c1c;
             font-size: 0.75rem;
             line-height: 1.5;
+            margin-top: 1rem;
         }
 
         @media (max-width: 480px) {
@@ -246,6 +298,7 @@
                 flex-wrap: wrap;
             }
         }
+
     </style>
 </head>
 
@@ -256,10 +309,12 @@
 
         <!-- LEFT BLUE PANEL -->
         <section class="welcome-panel">
+
             <div>
 
-                <!-- Brand Logo / Name -->
+                <!-- BRAND LOGO / NAME -->
                 <div class="brand-box">
+
                     <div class="brand-icon">
                         <img
                             src="images/babydududocslogo.jpg"
@@ -267,34 +322,47 @@
                         >
                     </div>
 
-                    <span class="brand-name">Baby Dudu Docs</span>
+                    <span class="brand-name">
+                        Baby Dudu Docs
+                    </span>
+
                 </div>
 
-                <!-- Headline -->
-                <h1 class="welcome-title">Clinic Management Portal</h1>
+                <!-- HEADLINE -->
+                <h1 class="welcome-title">
+                    Clinic Management Portal
+                </h1>
 
-                <!-- Description -->
                 <p class="welcome-desc">
-                    Seamless patient relationship management, appointment scheduling,
-                    inquiry resolution, and healthcare staff analytics in one
+                    Seamless patient relationship management,
+                    appointment scheduling, inquiry resolution,
+                    and healthcare staff analytics in one
                     unified platform.
                 </p>
+
             </div>
+
         </section>
+
 
         <!-- RIGHT FORM PANEL -->
         <section class="form-panel">
 
-            <h2 class="form-title">Sign in to your account</h2>
+            <h2 class="form-title">
+                Sign in to your account
+            </h2>
+
             <p class="form-subtitle">
                 Enter your credentials to access the portal.
             </p>
 
+
             <!-- LOGIN FORM -->
             <form onsubmit="handleLogin(event)" class="login-form">
 
-                <!-- Email Field -->
+                <!-- EMAIL FIELD -->
                 <div class="input-group">
+
                     <label for="email" class="input-label">
                         Email Address
                     </label>
@@ -304,93 +372,291 @@
                         id="email"
                         required
                         class="text-input"
+                        placeholder="Enter your email"
+                        autocomplete="username"
                     >
+
                 </div>
 
-                <!-- Password Field -->
+
+                <!-- PASSWORD FIELD -->
                 <div class="input-group">
+
                     <label for="password" class="input-label">
                         Password
                     </label>
 
-                    <input
-                        type="password"
-                        id="password"
-                        required
-                        class="text-input"
-                    >
+                    <div class="password-wrapper">
+
+                        <input
+                            type="password"
+                            id="password"
+                            required
+                            class="text-input"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                        >
+
+                        <!-- VIEW PASSWORD BUTTON -->
+                        <button
+                            type="button"
+                            class="toggle-password"
+                            id="togglePassword"
+                            aria-label="Show password"
+                            title="Show password"
+                            aria-pressed="false"
+                        >
+
+                            <!-- EYE ICON -->
+                            <svg
+                                id="eyeIcon"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="19"
+                                height="19"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+
+                        </button>
+
+                    </div>
+
                 </div>
 
-                <!-- Remember Me & Forgot Password -->
+
+                <!-- REMEMBER ME & FORGOT PASSWORD -->
                 <div class="form-extras">
+
                     <label class="checkbox-label">
+
                         <input
                             type="checkbox"
                             id="remember"
                             class="checkbox-input"
                         >
+
                         Remember me
+
                     </label>
 
                     <a
                         href="#"
-                        onclick="alert('Password reset link sent.'); return false;"
+                        onclick="alert('Please contact your administrator to reset your password.'); return false;"
                         class="forgot-link"
                     >
                         Forgot password?
                     </a>
+
                 </div>
 
-                <!-- Submit Button -->
+
+                <!-- SUBMIT BUTTON -->
                 <button type="submit" class="submit-btn">
                     Sign In
                 </button>
 
             </form>
+
+
+            <!-- ERROR MESSAGE -->
             <p id="login-error" class="login-error" role="alert"></p>
+
         </section>
+
     </div>
 
-    <!-- JAVASCRIPT -->
+
+    <!-- JAVASCRIPT / SUPABASE -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabaseClient.js"></script>
+
     <script>
+
+        // =====================================
+        // REMEMBER ME - LOAD SAVED EMAIL
+        // =====================================
+
+        const emailInput = document.getElementById("email");
+        const rememberCheckbox = document.getElementById("remember");
+
+        const savedEmail = localStorage.getItem("rememberedEmail");
+
+        // Automatically display saved email
+        if (savedEmail) {
+            emailInput.value = savedEmail;
+            rememberCheckbox.checked = true;
+        }
+
+
+        // =====================================
+        // SHOW / HIDE PASSWORD
+        // =====================================
+
+        const passwordInput = document.getElementById("password");
+        const togglePassword = document.getElementById("togglePassword");
+        const eyeIcon = document.getElementById("eyeIcon");
+
+        togglePassword.addEventListener("click", function () {
+
+            const isPasswordHidden = passwordInput.type === "password";
+
+            if (isPasswordHidden) {
+
+                // SHOW PASSWORD
+                passwordInput.type = "text";
+
+                togglePassword.setAttribute("aria-label", "Hide password");
+                togglePassword.setAttribute("title", "Hide password");
+                togglePassword.setAttribute("aria-pressed", "true");
+
+                // EYE SLASH ICON
+                eyeIcon.innerHTML = `
+                    <path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/>
+                    <path d="M16.68 16.68A10.94 10.94 0 0 1 12 17
+                    c-6.4 0-10-5-10-5a16.4 16.4 0 0 1 4.3-4.8"/>
+                    <path d="M9.88 5.08A10.94 10.94 0 0 1 12 5
+                    c6.4 0 10 7 10 7a16.7 16.7 0 0 1-2.2 2.8"/>
+                    <line x1="2" y1="2" x2="22" y2="22"/>
+                `;
+
+            } else {
+
+                // HIDE PASSWORD
+                passwordInput.type = "password";
+
+                togglePassword.setAttribute("aria-label", "Show password");
+                togglePassword.setAttribute("title", "Show password");
+                togglePassword.setAttribute("aria-pressed", "false");
+
+                // NORMAL EYE ICON
+                eyeIcon.innerHTML = `
+                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                `;
+
+            }
+
+        });
+
+
+        // =====================================
+        // LOGIN FUNCTION
+        // =====================================
+
         async function handleLogin(event) {
+
             event.preventDefault();
 
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value;
-            const button = event.currentTarget.querySelector('button[type="submit"]');
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const rememberMe = rememberCheckbox.checked;
+
+            const button = event.currentTarget.querySelector(
+                'button[type="submit"]'
+            );
+
             const errorMessage = document.getElementById("login-error");
+
             button.disabled = true;
             button.textContent = "Signing in...";
+
             errorMessage.style.display = "none";
 
-            try {
-                const { data, error } = await db.auth.signInWithPassword({ email, password });
-                if (error) throw error;
 
-                if (data.user.app_metadata?.role !== "clinic_staff") {
-                    await db.auth.signOut();
-                    throw new Error("This account is not authorized for the clinic portal.");
+            try {
+
+                // SUPABASE LOGIN
+                const { data, error } = await db.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    throw error;
                 }
 
+
+                // CHECK USER AUTHORIZATION
+                if (data.user.app_metadata?.role !== "clinic_staff") {
+
+                    await db.auth.signOut();
+
+                    throw new Error(
+                        "This account is not authorized for the clinic portal."
+                    );
+
+                }
+
+
+                // =====================================
+                // REMEMBER ME FUNCTION
+                // =====================================
+
+                if (rememberMe) {
+
+                    // SAVE EMAIL
+                    localStorage.setItem("rememberedEmail", email);
+
+                } else {
+
+                    // REMOVE SAVED EMAIL
+                    localStorage.removeItem("rememberedEmail");
+
+                }
+
+
+                // =====================================
+                // REDIRECT TO MAIN PAGE
+                // =====================================
+
                 window.location.href = "index.html";
+
+
             } catch (error) {
-                errorMessage.textContent = error.message || "Sign in failed. Please try again.";
+
+                // DISPLAY ERROR MESSAGE
+                errorMessage.textContent =
+                    error.message || "Sign in failed. Please try again.";
+
                 errorMessage.style.display = "block";
+
+
             } finally {
+
                 button.disabled = false;
                 button.textContent = "Sign In";
+
             }
+
         }
 
-        const loginError = new URLSearchParams(window.location.search).get("error");
+
+        // =====================================
+        // HANDLE UNAUTHORIZED LOGIN
+        // =====================================
+
+        const loginError = new URLSearchParams(
+            window.location.search
+        ).get("error");
+
         if (loginError === "unauthorized") {
+
             const errorMessage = document.getElementById("login-error");
-            errorMessage.textContent = "Sign in with an authorized clinic staff account to access patient records.";
+
+            errorMessage.textContent =
+                "Sign in with an authorized clinic staff account to access patient records.";
+
             errorMessage.style.display = "block";
+
         }
+
     </script>
 
 </body>
