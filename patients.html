@@ -109,7 +109,7 @@
                     <h1 class="text-2xl font-bold text-slate-900">Patient Directory</h1>
                     <p class="text-slate-500 text-sm">Manage patient records, medical histories, and contact info.</p>
                 </div>
-                <button onclick="openAddPatientModal()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 text-xs">
+                <button id="add-patient-button" hidden onclick="openAddPatientModal()" class="hidden flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 text-xs">
                     <i data-lucide="user-plus" class="w-4 h-4"></i> Add New Patient
                 </button>
             </div>
@@ -162,6 +162,7 @@
                     <div>
                         <label for="patient-date-of-birth" class="block font-semibold text-slate-700 mb-1">Date of Birth</label>
                         <input type="date" id="patient-date-of-birth" name="date_of_birth" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <p class="mt-1 text-[11px] text-slate-400">Age is calculated automatically from date of birth.</p>
                     </div>
                     <div>
                         <label for="patient-gender" class="block font-semibold text-slate-700 mb-1">Sex</label>
@@ -205,12 +206,7 @@
                             <option value="inactive">Inactive</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="patient-age" class="block font-semibold text-slate-700 mb-1">Age</label>
-                        <input type="text" id="patient-age" name="age" inputmode="numeric" pattern="[0-9]*" aria-describedby="patient-age-error" oninput="validatePatientField('patient-age')" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                        <p id="patient-age-error" class="mt-1 hidden text-rose-600" aria-live="polite"></p>
-                    </div>
-                    <div>
+                    <div class="sm:col-span-2">
                         <label for="patient-blood" class="block font-semibold text-slate-700 mb-1">Blood Group</label>
                         <select id="patient-blood" name="blood_group" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none">
                             <option value="">Select blood group</option>

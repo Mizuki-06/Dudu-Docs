@@ -17,7 +17,6 @@ const patientFields = [
     "medical_history",
     "last_visit",
     "status",
-    "age",
     "blood_group"
 ] as const;
 
@@ -48,11 +47,6 @@ function getPatientFields(value: unknown) {
     if (patient.status !== "active" && patient.status !== "inactive") {
         throw new Error("Status must be active or inactive.");
     }
-    if (patient.age !== null && patient.age !== undefined &&
-        (typeof patient.age !== "number" || !Number.isInteger(patient.age) || patient.age < 0)) {
-        throw new Error("Age must be a non-negative whole number.");
-    }
-
     patient.full_name = patient.full_name.trim();
     patient.contact_number = patient.contact_number.trim();
     return patient;
@@ -72,7 +66,7 @@ Deno.serve(async (request: Request) => {
 
     const authorization = request.headers.get("Authorization") || "";
     const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
-    if (!tokenMatch) return respond({ error: "Sign in with a clinic staff account." }, 401);
+    if (!tokenMatch) return respond({ error: "Sign in with an authorized clinic account." }, 401);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -87,7 +81,15 @@ Deno.serve(async (request: Request) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(tokenMatch[1]);
     if (authError || !user) return respond({ error: "Your session is invalid. Please sign in again." }, 401);
-    if (user.app_metadata?.role !== "clinic_staff") {
+    const role = user.app_metadata?.role;
+    console.log("PATIENT FUNCTION AUTH CHECK:", {
+    userId: user.id,
+    email: user.email,
+    role: role
+});
+    const canViewPatients = ["admin", "clinic_staff", "doctor"].includes(role);
+    const canManagePatients = role === "admin" || role === "clinic_staff";
+    if (!canViewPatients) {
         return respond({ error: "This account is not authorized to access patient records." }, 403);
     }
 
@@ -113,6 +115,10 @@ Deno.serve(async (request: Request) => {
     }
 
     if (action === "create" || action === "update") {
+        if (!canManagePatients) {
+            return respond({ error: "Only admins and clinic staff can change patient records." }, 403);
+        }
+
         let patient: Record<string, unknown>;
         try {
             patient = getPatientFields(payload.patient);
@@ -156,6 +162,10 @@ Deno.serve(async (request: Request) => {
     }
 
     if (action === "delete") {
+        if (!canManagePatients) {
+            return respond({ error: "Only admins and clinic staff can change patient records." }, 403);
+        }
+
         if (payload.id === null || payload.id === undefined || String(payload.id).trim() === "") {
             return respond({ error: "Patient ID is required." }, 400);
         }

@@ -11,6 +11,23 @@ let appData = {
     patientsLoading: false,
     appointmentsLoading: false
 };
+let currentUserRole = '';
+
+function canManagePatients() {
+    return currentUserRole === 'admin' || currentUserRole === 'clinic_staff';
+}
+
+async function initializePatientPermissions() {
+    const { data: { user }, error } = await db.auth.getUser();
+    if (error) throw error;
+
+    currentUserRole = user?.app_metadata?.role || '';
+    const addPatientButton = document.getElementById('add-patient-button');
+    if (addPatientButton) {
+        addPatientButton.hidden = !canManagePatients();
+        addPatientButton.classList.toggle('hidden', !canManagePatients());
+    }
+}
 
 // --- 2. TIME CONVERSION HELPERS ---
 function formatTimeString(timeStr) {
@@ -82,8 +99,10 @@ async function fetchPatients() {
     
     if (error) {
         console.error('Error fetching patients:', error);
+        appData.patientsError = error.message;
         return [];
     }
+    appData.patientsError = '';
     return data || [];
 }
 
@@ -308,6 +327,30 @@ function renderDoctorSidebar() {
     if (window.lucide) lucide.createIcons();
 }
 
+function getPatientAge(dateOfBirth) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateOfBirth || ''));
+    if (!match) return null;
+
+    const birthYear = Number(match[1]);
+    const birthMonth = Number(match[2]) - 1;
+    const birthDay = Number(match[3]);
+    const birthDate = new Date(birthYear, birthMonth, birthDay);
+    if (
+        birthDate.getFullYear() !== birthYear ||
+        birthDate.getMonth() !== birthMonth ||
+        birthDate.getDate() !== birthDay
+    ) return null;
+
+    const today = new Date();
+    let age = today.getFullYear() - birthYear;
+    if (
+        today.getMonth() < birthMonth ||
+        (today.getMonth() === birthMonth && today.getDate() < birthDay)
+    ) age--;
+
+    return age >= 0 ? age : null;
+}
+
 function renderPatientsTable() {
     const tbody = document.getElementById('patients-table-body');
     const searchVal = (document.getElementById('patient-search-input')?.value || '').toLowerCase();
@@ -334,29 +377,216 @@ function renderPatientsTable() {
         return;
     }
 
-    tbody.innerHTML = filtered.map(p => `
-        <tr class="hover:bg-slate-50/80 transition">
-            <td class="p-4 font-bold text-slate-800">${displayValue(p.full_name)}</td>
-            <td class="p-4">
-                <p class="font-medium text-slate-700">${displayValue(p.contact_number)}</p>
-                <p class="text-slate-400 text-[11px]">${displayValue(p.email)}</p>
-            </td>
-            <td class="p-4 font-medium">${p.age === null || p.age === undefined || p.age === '' ? '—' : `${displayValue(p.age)} Yrs`} / ${displayValue(p.sex)}</td>
-            <td class="p-4"><span class="px-2 py-0.5 bg-brand-50 text-brand-700 font-bold rounded-lg">${displayValue(p.blood_group)}</span></td>
-            <td class="p-4 text-slate-500 font-medium">${displayValue(p.last_visit)}</td>
-            <td class="p-4 text-right">
-                <button type="button" onclick="openPatientDetails(${appData.patients.indexOf(p)})" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold rounded-xl text-[11px] transition">
-                    View Details
-                </button>
-                <button type="button" onclick="openEditPatient(${appData.patients.indexOf(p)})" class="px-3 py-1 ml-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-[11px] transition" aria-label="Edit ${escapeHtml(p.full_name)}">
-                    Edit
-                </button>
-                <button type="button" onclick="deletePatient(${appData.patients.indexOf(p)})" class="px-3 py-1 ml-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-[11px] transition" aria-label="Delete ${escapeHtml(p.full_name)}">
-                    Delete
-                </button>
-            </td>
-        </tr>
+    tbody.innerHTML = filtered.map(p => {
+        const index = appData.patients.indexOf(p);
+        const age = getPatientAge(p.date_of_birth);
+        return `
+            <tr class="hover:bg-slate-50/80 transition">
+                <td class="p-4 font-bold text-slate-800">${displayValue(p.full_name)}</td>
+                <td class="p-4">
+                    <p class="font-medium text-slate-700">${displayValue(p.contact_number)}</p>
+                    <p class="text-slate-400 text-[11px]">${displayValue(p.email)}</p>
+                </td>
+                <td class="p-4 font-medium">${age === null ? '—' : `${age} Yrs`} / ${displayValue(p.sex)}</td>
+                <td class="p-4"><span class="px-2 py-0.5 bg-brand-50 text-brand-700 font-bold rounded-lg">${displayValue(p.blood_group)}</span></td>
+                <td class="p-4 text-slate-500 font-medium">${displayValue(p.last_visit)}</td>
+                <td class="p-4 text-right">
+                    <button type="button" onclick="openPatientDetails(${index})" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold rounded-xl text-[11px] transition">
+                        View Details
+                    </button>
+                    ${canManagePatients() ? `
+                    <button type="button" onclick="openEditPatient(${index})" class="px-3 py-1 ml-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-[11px] transition" aria-label="Edit ${escapeHtml(p.full_name)}">
+                        Edit
+                    </button>
+                    <button type="button" onclick="deletePatient(${index})" class="px-3 py-1 ml-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl text-[11px] transition" aria-label="Delete ${escapeHtml(p.full_name)}">
+                        Delete
+                    </button>
+                    ` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function openPatientDetails(index) {
+    const patient = appData.patients[index];
+    if (!patient) return;
+    const age = getPatientAge(patient.date_of_birth);
+
+    const details = [
+        ['Full Name', patient.full_name],
+        ['Date of Birth', patient.date_of_birth],
+        ['Age', age === null ? null : `${age} years`],
+        ['Sex', patient.sex],
+        ['Contact Number', patient.contact_number],
+        ['Email', patient.email],
+        ['Address', patient.address],
+        ['Allergies', patient.allergies],
+        ['Medical History', patient.medical_history],
+        ['Blood Group', patient.blood_group],
+        ['Last Visit', patient.last_visit],
+        ['Status', patient.status]
+    ];
+    const content = document.getElementById('patient-details-content');
+    if (!content) return;
+
+    content.innerHTML = details.map(([label, value]) => `
+        <div class="rounded-xl bg-slate-50 p-3">
+            <dt class="text-[11px] font-semibold text-slate-500">${escapeHtml(label)}</dt>
+            <dd class="mt-1 break-words text-sm text-slate-800">${displayValue(value)}</dd>
+        </div>
     `).join('');
+    document.getElementById('patient-details-title').textContent = patient.full_name || 'Patient Details';
+    document.getElementById('modal-patient-details')?.classList.remove('hidden');
+}
+
+function openAddPatientModal() {
+    if (!canManagePatients()) {
+        showToast('Only admins and clinic staff can manage patient records.');
+        return;
+    }
+
+    const form = document.getElementById('patient-form');
+    form?.reset();
+    document.getElementById('patient-id').value = '';
+    document.getElementById('patient-modal-title').textContent = 'Add New Patient Record';
+    document.getElementById('patient-submit-button').textContent = 'Save Record';
+    clearPatientValidation();
+    document.getElementById('modal-add-patient')?.classList.remove('hidden');
+}
+
+function openEditPatient(index) {
+    if (!canManagePatients()) {
+        showToast('Only admins and clinic staff can manage patient records.');
+        return;
+    }
+
+    const patient = appData.patients[index];
+    if (!patient) return;
+
+    document.getElementById('patient-id').value = patient.id;
+    document.getElementById('patient-name').value = patient.full_name || '';
+    document.getElementById('patient-date-of-birth').value = patient.date_of_birth || '';
+    document.getElementById('patient-gender').value = patient.sex || '';
+    document.getElementById('patient-phone').value = patient.contact_number || '';
+    document.getElementById('patient-email').value = patient.email || '';
+    document.getElementById('patient-address').value = patient.address || '';
+    document.getElementById('patient-allergies').value = patient.allergies || '';
+    document.getElementById('patient-medical-history').value = patient.medical_history || '';
+    document.getElementById('patient-last-visit').value = patient.last_visit || '';
+    document.getElementById('patient-status').value = patient.status || 'active';
+    document.getElementById('patient-blood').value = patient.blood_group || '';
+    document.getElementById('patient-modal-title').textContent = 'Edit Patient Record';
+    document.getElementById('patient-submit-button').textContent = 'Save Changes';
+    clearPatientValidation();
+    document.getElementById('modal-add-patient')?.classList.remove('hidden');
+}
+
+function clearPatientValidation() {
+    ['patient-name', 'patient-phone', 'patient-email'].forEach(fieldId => {
+        const input = document.getElementById(fieldId);
+        const error = document.getElementById(`${fieldId}-error`);
+        if (input) input.removeAttribute('aria-invalid');
+        if (error) {
+            error.textContent = '';
+            error.classList.add('hidden');
+        }
+    });
+}
+
+function validatePatientField(fieldId) {
+    const input = document.getElementById(fieldId);
+    const error = document.getElementById(`${fieldId}-error`);
+    if (!input || !error) return true;
+
+    let message = '';
+    if (fieldId === 'patient-name' && !input.value.trim()) {
+        message = "Please enter the patient's full name.";
+    } else if (fieldId === 'patient-phone' && !input.value.trim()) {
+        message = 'Please enter a contact number.';
+    } else if (fieldId === 'patient-email' && input.value && !input.validity.valid) {
+        message = 'Please enter a valid email address.';
+    }
+
+    input.toggleAttribute('aria-invalid', Boolean(message));
+    error.textContent = message;
+    error.classList.toggle('hidden', !message);
+    return !message;
+}
+
+async function handleSavePatient(event) {
+    event.preventDefault();
+    if (!canManagePatients()) {
+        showToast('Only admins and clinic staff can manage patient records.');
+        return;
+    }
+
+    const fieldsValid = ['patient-name', 'patient-phone', 'patient-email']
+        .map(validatePatientField)
+        .every(Boolean);
+    if (!fieldsValid) return;
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const patient = {
+        full_name: String(formData.get('full_name') || '').trim(),
+        date_of_birth: formData.get('date_of_birth') || null,
+        sex: formData.get('sex') || null,
+        contact_number: String(formData.get('contact_number') || '').trim(),
+        email: String(formData.get('email') || '').trim() || null,
+        address: String(formData.get('address') || '').trim() || null,
+        allergies: String(formData.get('allergies') || '').trim() || null,
+        medical_history: String(formData.get('medical_history') || '').trim() || null,
+        last_visit: formData.get('last_visit') || null,
+        status: formData.get('status'),
+        blood_group: formData.get('blood_group') || null
+    };
+    const patientId = document.getElementById('patient-id').value;
+    const submitButton = document.getElementById('patient-submit-button');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Saving...';
+
+    try {
+        const savedPatient = patientId
+            ? await updatePatientRecord(patientId, patient)
+            : await registerPatient(patient);
+        const existingIndex = appData.patients.findIndex(item => String(item.id) === String(savedPatient.id));
+        if (existingIndex < 0) appData.patients.unshift(savedPatient);
+        else appData.patients[existingIndex] = savedPatient;
+        appData.patientsError = '';
+        form.reset();
+        document.getElementById('patient-id').value = '';
+        closeModal('modal-add-patient');
+        renderPatientsTable();
+        showToast(patientId ? 'Patient record updated.' : `Added new patient: ${patient.full_name}`);
+    } catch (error) {
+        console.error('Could not save patient record:', error);
+        showToast(error.message || 'Could not save patient record.');
+    } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = patientId ? 'Save Changes' : 'Save Record';
+    }
+}
+
+async function deletePatient(index) {
+    if (!canManagePatients()) {
+        showToast('Only admins and clinic staff can manage patient records.');
+        return;
+    }
+
+    const patient = appData.patients[index];
+    if (!patient) return;
+    if (!window.confirm(`Delete the patient record for ${patient.full_name}?`)) return;
+
+    try {
+        await deletePatientRecord(patient.id);
+        appData.patients.splice(index, 1);
+        renderPatientsTable();
+        showToast(`Deleted patient record for ${patient.full_name}.`);
+    } catch (error) {
+        console.error('Could not delete patient record:', error);
+        showToast(error.message || 'Could not delete patient record.');
+    }
 }
 
 function renderDashboardMetrics() {
@@ -1178,7 +1408,16 @@ function initAppointmentControls() {
 // --- 9. APP INITIALIZATION LISTENER ---
 window.addEventListener('load', function() {
     initializePageNavigation();
-    loadAllDatabaseRecords();
+    if (document.body.dataset.page === 'patients') {
+        initializePatientPermissions()
+            .catch(error => {
+                console.error('Could not determine patient permissions:', error);
+                appData.patientsError = 'Could not verify your account permissions. Please sign in again.';
+            })
+            .finally(loadAllDatabaseRecords);
+    } else {
+        loadAllDatabaseRecords();
+    }
     
     try { initAppointmentControls(); } catch (error) { console.error('Appointment controls failed:', error); }
     try { loadSettings(); } catch (error) { console.error('Settings load failed:', error); }
