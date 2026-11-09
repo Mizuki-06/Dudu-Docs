@@ -572,27 +572,34 @@
 
             try {
 
-                // SUPABASE LOGIN
-                const { data, error } = await db.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
+               
+             // SUPABASE LOGIN
+const { data, error } = await db.auth.signInWithPassword({
+    email: email,
+    password: password
+});
 
-                if (error) {
-                    throw error;
-                }
+if (error) {
+    throw error;
+}
 
+// CHECK USER AUTHORIZATION
+const role = data.user.app_metadata?.role;
 
-                // CHECK USER AUTHORIZATION
-                if (data.user.app_metadata?.role !== "clinic_staff") {
+const allowedRoles = ["admin", "doctor", "clinic_staff"];
 
-                    await db.auth.signOut();
+if (!allowedRoles.includes(role)) {
+    await db.auth.signOut();
 
-                    throw new Error(
-                        "This account is not authorized for the clinic portal."
-                    );
+    throw new Error(
+        "This account is not authorized for the clinic portal."
+    );
+}
 
-                }
+// ALL AUTHORIZED ROLES CAN ACCESS THE CURRENT DASHBOARD
+console.log("Logged in successfully as:", role);
+
+window.location.href = "dashboard.html";
 
 
                 // =====================================
