@@ -118,12 +118,12 @@
             </div>
 
             <!-- Metric Cards Row -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
                     <div>
                         <p class="text-xs font-medium text-slate-400">Total Appointments</p>
-                        <h3 class="text-2xl font-bold text-slate-800 mt-1">128</h3>
-                        <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i> +12% from last week</p>
+                        <h3 id="dashboard-total-appointments" class="text-2xl font-bold text-slate-800 mt-1">—</h3>
+                        <p class="text-[11px] text-emerald-600 font-semibold mt-1 whitespace-nowrap">All recorded appointments</p>
                     </div>
                     <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
                         <i data-lucide="calendar" class="w-6 h-6"></i>
@@ -132,12 +132,34 @@
 
                 <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-medium text-slate-400">Active Patients</p>
-                        <h3 class="text-2xl font-bold text-slate-800 mt-1">1,420</h3>
-                        <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i> +8 new today</p>
+                        <p class="text-xs font-medium text-slate-400">Total Patients</p>
+                        <h3 id="dashboard-total-patients" class="text-2xl font-bold text-slate-800 mt-1">—</h3>
+                        <p class="text-[11px] text-slate-500 font-semibold mt-1">All patient records</p>
                     </div>
                     <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                         <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Pending Appointments</p>
+                        <h3 id="dashboard-pending-appointments" class="text-2xl font-bold text-slate-800 mt-1">—</h3>
+                        <p class="text-[11px] text-amber-600 font-semibold mt-1">Awaiting completion</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <i data-lucide="clock" class="w-6 h-6"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400">Active Doctors</p>
+                        <h3 id="dashboard-active-doctors" class="text-2xl font-bold text-slate-800 mt-1">—</h3>
+                        <p class="text-[11px] text-slate-500 font-semibold mt-1">In the doctor directory</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                        <i data-lucide="stethoscope" class="w-6 h-6"></i>
                     </div>
                 </div>
 
@@ -151,17 +173,6 @@
                         <i data-lucide="message-square" class="w-6 h-6"></i>
                     </div>
                 </div>
-
-                <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-medium text-slate-400">Satisfaction Rate</p>
-                        <h3 class="text-2xl font-bold text-slate-800 mt-1">98.4%</h3>
-                        <p class="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1"><i data-lucide="smile" class="w-3.5 h-3.5"></i> High performance</p>
-                    </div>
-                    <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                        <i data-lucide="heart-pulse" class="w-6 h-6"></i>
-                    </div>
-                </div>
             </div>
 
             <!-- Analytics Visual Highlights -->
@@ -170,10 +181,11 @@
                 <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="font-bold text-slate-800 text-base">Weekly Patient Traffic</h3>
-                        <span class="text-xs text-slate-400">Updated 10 mins ago</span>
+                        <span class="text-xs text-slate-400">Appointments this week</span>
                     </div>
-                    <div class="h-64 flex items-center justify-center border border-dashed border-slate-200 rounded-2xl">
+                    <div class="relative h-64 border border-dashed border-slate-200 rounded-2xl p-3">
                         <canvas id="dashboardChart"></canvas>
+                        <p id="dashboard-chart-status" class="hidden absolute inset-0 items-center justify-center text-sm text-slate-500">Appointment data could not be loaded.</p>
                     </div>
                 </div>
 
@@ -192,6 +204,8 @@
         <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
         <span id="toast-message">Action saved successfully!</span>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

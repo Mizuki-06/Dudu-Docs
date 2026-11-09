@@ -12,6 +12,12 @@ async function callPatientFunction(body, operation) {
         }
         throw new Error(`Could not ${operation}: ${message}`);
     }
+    if (data?.activityLogError) {
+        console.error("Patient change was saved, but activity logging failed:", data.activityLogError);
+        if (typeof showToast === "function") {
+            showToast(`Patient record saved, but activity logging failed: ${data.activityLogError}`);
+        }
+    }
     return data;
 }
 

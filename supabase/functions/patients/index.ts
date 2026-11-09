@@ -58,6 +58,14 @@ function getPatientFields(value: unknown) {
     return patient;
 }
 
+async function recordActivity(supabase: ReturnType<typeof createClient>, action: string, description: string) {
+    const { error } = await supabase.from("activity_logs").insert({ action, description });
+    if (!error) return null;
+
+    console.error("Patient change was saved, but activity logging failed:", error.message);
+    return error.message;
+}
+
 Deno.serve(async (request: Request) => {
     if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
     if (request.method !== "POST") return respond({ error: "Method not allowed." }, 405);
@@ -118,7 +126,12 @@ Deno.serve(async (request: Request) => {
                 console.error("Patient insert failed:", error.message);
                 return respond({ error: "Could not add patient record." }, 500);
             }
-            return respond({ patient: data }, 201);
+            const activityLogError = await recordActivity(
+                supabase,
+                `Added patient record for ${data.full_name}`,
+                "Created a patient record."
+            );
+            return respond({ patient: data, activityLogError }, 201);
         }
 
         if (payload.id === null || payload.id === undefined || String(payload.id).trim() === "") {
@@ -134,19 +147,35 @@ Deno.serve(async (request: Request) => {
             console.error("Patient update failed:", error.message);
             return respond({ error: "Could not update patient record." }, 500);
         }
-        return respond({ patient: data });
+        const activityLogError = await recordActivity(
+            supabase,
+            `Updated patient record for ${data.full_name}`,
+            "Changed patient record details."
+        );
+        return respond({ patient: data, activityLogError });
     }
 
     if (action === "delete") {
         if (payload.id === null || payload.id === undefined || String(payload.id).trim() === "") {
             return respond({ error: "Patient ID is required." }, 400);
         }
-        const { error } = await supabase.from("patients").delete().eq("id", payload.id);
+        const { data, error } = await supabase
+            .from("patients")
+            .delete()
+            .eq("id", payload.id)
+            .select("full_name")
+            .maybeSingle();
         if (error) {
             console.error("Patient delete failed:", error.message);
             return respond({ error: "Could not delete patient record." }, 500);
         }
-        return respond({ success: true });
+        if (!data) return respond({ error: "Patient record not found." }, 404);
+        const activityLogError = await recordActivity(
+            supabase,
+            `Deleted patient record for ${data?.full_name || `patient ${payload.id}`}`,
+            "Deleted a patient record."
+        );
+        return respond({ success: true, activityLogError });
     }
 
     return respond({ error: "Unsupported patient operation." }, 400);

@@ -3,9 +3,11 @@ let appData = {
     doctors: [],
     patients: [],
     appointments: [],
+    appointmentsTotal: 0,
     inquiries: [],
     activities: [],
     patientsError: '',
+    appointmentsError: '',
     patientsLoading: false,
     appointmentsLoading: false
 };
@@ -87,7 +89,7 @@ async function fetchPatients() {
 
 async function fetchAppointments() {
     // 1. Try foreign key relational join query
-    const { data, error } = await db
+    const { data, error, count } = await db
         .from('appointments')
         .select(`
             id,
@@ -101,16 +103,16 @@ async function fetchAppointments() {
             status,
             patients ( id, full_name ),
             staff ( staff_id, full_name, specialization )
-        `)
+        `, { count: 'exact' })
         .order('appointment_date', { ascending: true });
 
     if (error) {
         console.warn('Relational fetch failed, attempting fallback query:', error.message);
         
         // 2. Fallback query if FK relationship caching is pending in Supabase
-        const { data: simpleData, error: simpleError } = await db
+        const { data: simpleData, error: simpleError, count: simpleCount } = await db
             .from('appointments')
-            .select('*')
+            .select('*', { count: 'exact' })
             .order('appointment_date', { ascending: true });
 
         if (simpleError) {
@@ -118,6 +120,7 @@ async function fetchAppointments() {
             throw simpleError;
         }
 
+        appData.appointmentsTotal = simpleCount ?? (simpleData || []).length;
         return (simpleData || []).map(item => {
             const patientObj = appData.patients.find(p => String(p.id) === String(item.patient_id));
             const staffObj = appData.doctors.find(d => String(d.staff_id || d.id) === String(item.staff_id));
@@ -136,6 +139,7 @@ async function fetchAppointments() {
         });
     }
 
+    appData.appointmentsTotal = count ?? (data || []).length;
     return (data || []).map(item => ({
         id: item.id,
         patient_id: item.patient_id,
@@ -181,16 +185,30 @@ async function fetchActivities() {
         return [];
     }
     return (data || []).map(act => ({
-        user: 'Staff Member',
+        user: act.user || 'Clinic Staff',
         action: act.action || act.description || 'Performed action',
-        time: act.created_at ? new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+        time: act.created_at ? new Date(act.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''
     }));
+}
+
+async function recordActivity(action, description) {
+    const { error } = await db.from('activity_logs').insert([{ action, description }]);
+    if (error) {
+        console.error('Could not record activity:', error);
+        return error;
+    }
+
+    appData.activities.unshift({ user: 'Clinic Staff', action, time: 'Just now' });
+    appData.activities = appData.activities.slice(0, 10);
+    renderActivityStream();
+    return null;
 }
 
 // --- 4. DATA INITIALIZATION PROCEDURE ---
 async function loadAllDatabaseRecords() {
     appData.appointmentsLoading = true;
     appData.patientsLoading = true;
+    appData.appointmentsError = '';
 
     try {
         const [doctorsRes, patientsRes, inquiriesRes, activitiesRes] = await Promise.all([
@@ -206,7 +224,12 @@ async function loadAllDatabaseRecords() {
         appData.activities = activitiesRes;
 
         // Fetch appointments after doctors and patients exist for fallback resolution
-        appData.appointments = await fetchAppointments();
+        try {
+            appData.appointments = await fetchAppointments();
+        } catch (error) {
+            appData.appointmentsError = error.message || 'Could not load appointments.';
+            throw error;
+        }
     } catch (error) {
         console.error('Database load error detail:', error);
         showToast(`Failed to sync database: ${error.message || 'Check console log'}`);
@@ -216,6 +239,7 @@ async function loadAllDatabaseRecords() {
         
         renderDoctorSidebar();
         renderPatientsTable();
+        renderDashboardMetrics();
         renderInquiriesAndFeedback();
         renderActivityStream();
         renderMiniCalendar();
@@ -335,6 +359,104 @@ function renderPatientsTable() {
     `).join('');
 }
 
+function renderDashboardMetrics() {
+    const totalAppointments = document.getElementById('dashboard-total-appointments');
+    const totalPatients = document.getElementById('dashboard-total-patients');
+    const pendingAppointments = document.getElementById('dashboard-pending-appointments');
+    const activeDoctors = document.getElementById('dashboard-active-doctors');
+
+    if (totalAppointments) {
+        totalAppointments.textContent = appData.appointmentsError ? '—' : appData.appointmentsTotal.toLocaleString();
+    }
+    if (totalPatients) totalPatients.textContent = appData.patients.length.toLocaleString();
+    if (pendingAppointments) {
+        const closedStatuses = ['Completed', 'Cancelled'];
+        const count = appData.appointments.filter(appointment =>
+            !closedStatuses.includes(normalizeAppointmentStatus(appointment.status))
+        ).length;
+        pendingAppointments.textContent = appData.appointmentsError ? '—' : count.toLocaleString();
+    }
+    if (activeDoctors) activeDoctors.textContent = appData.doctors.length.toLocaleString();
+    renderWeeklyTrafficChart();
+}
+
+function renderWeeklyTrafficChart() {
+    const canvas = document.getElementById('dashboardChart');
+    if (!canvas) return;
+    const status = document.getElementById('dashboard-chart-status');
+    if (appData.appointmentsError) {
+        const existingChart = typeof Chart === 'undefined' ? null : Chart.getChart(canvas);
+        if (existingChart) existingChart.destroy();
+        canvas.hidden = true;
+        if (status) {
+            status.textContent = 'Appointment data could not be loaded.';
+            status.classList.remove('hidden');
+            status.classList.add('flex');
+        }
+        console.error('Weekly traffic chart unavailable:', appData.appointmentsError);
+        return;
+    }
+    if (typeof Chart === 'undefined') {
+        canvas.hidden = true;
+        if (status) {
+            status.textContent = 'Weekly chart is unavailable right now.';
+            status.classList.remove('hidden');
+            status.classList.add('flex');
+        }
+        console.error('Chart.js is not available; weekly traffic chart could not be rendered.');
+        return;
+    }
+    canvas.hidden = false;
+    if (status) {
+        status.classList.add('hidden');
+        status.classList.remove('flex');
+    }
+
+    const today = new Date();
+    const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+    const days = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + index);
+        return date;
+    });
+    const labels = days.map(date => date.toLocaleDateString(undefined, { weekday: 'short' }));
+    const counts = days.map(date => {
+        const key = dateKey(date);
+        return appData.appointments.filter(appointment => appointment.date === key).length;
+    });
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Appointments',
+                data: counts,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+}
+
 function displayValue(value) {
     return value === null || value === undefined || value === '' ? '—' : escapeHtml(value);
 }
@@ -376,6 +498,11 @@ function renderInquiriesAndFeedback() {
 function renderActivityStream() {
     const container = document.getElementById('recent-activity-stream');
     if (!container) return;
+
+    if (!appData.activities.length) {
+        container.innerHTML = '<p class="text-xs text-slate-500">No recent activity has been recorded.</p>';
+        return;
+    }
 
     container.innerHTML = appData.activities.map(act => `
         <div class="flex items-start gap-3 text-xs">
@@ -538,13 +665,40 @@ async function handleBookAppointment(e) {
         };
 
         if (appointmentId) {
+            const previousAppointment = appData.appointments.find(item => String(item.id) === String(appointmentId));
             const { error } = await db
                 .from('appointments')
                 .update(payload)
                 .eq('id', appointmentId);
 
             if (error) throw error;
-            showToast(`Appointment updated for ${selectedPatient?.full_name || 'patient'}.`);
+            const changes = [];
+            if (previousAppointment && String(previousAppointment.patient_id) !== String(patientId)) {
+                changes.push(`Patient: ${previousAppointment.patient} to ${selectedPatient?.full_name || 'patient'}`);
+            }
+            if (previousAppointment && String(previousAppointment.staff_id) !== String(staffId)) {
+                changes.push(`Doctor: ${previousAppointment.doctor} to ${selectedDoctor?.name || 'doctor'}`);
+            }
+            if (previousAppointment && previousAppointment.service !== service) {
+                changes.push(`Service: ${previousAppointment.service} to ${service}`);
+            }
+            if (previousAppointment && previousAppointment.date !== date) {
+                changes.push(`Date: ${previousAppointment.date} to ${date}`);
+            }
+            const newTime = formatTimeRange(start_time, end_time);
+            if (previousAppointment && previousAppointment.time !== newTime) {
+                changes.push(`Time: ${previousAppointment.time} to ${newTime}`);
+            }
+            if (previousAppointment && previousAppointment.notes !== notes) {
+                changes.push('Appointment notes updated.');
+            }
+            const activityError = await recordActivity(
+                `Updated appointment for ${selectedPatient?.full_name || previousAppointment?.patient || 'patient'} on ${date}`,
+                changes.join('; ') || `Updated appointment details for ${service} with ${selectedDoctor?.name || 'doctor'}.`
+            );
+            showToast(activityError
+                ? `Appointment saved, but activity logging failed: ${activityError.message}`
+                : `Appointment updated for ${selectedPatient?.full_name || 'patient'}.`);
         } else {
             payload.status = 'Confirmed';
             const { error } = await db
@@ -553,15 +707,18 @@ async function handleBookAppointment(e) {
 
             if (error) throw error;
 
-            await db.from('activity_logs').insert([{
-                action: `Booked ${selectedPatient?.full_name} for ${service} with ${selectedDoctor?.name} on ${date}`,
-                description: `Created appointment for patient ID ${patientId}`
-            }]);
-
-            showToast(`Appointment booked for ${selectedPatient?.full_name || 'patient'}!`);
+            const activityError = await recordActivity(
+                `Booked an appointment for ${selectedPatient?.full_name || 'patient'} on ${date}`,
+                `${service} with ${selectedDoctor?.name || 'doctor'} at ${formatTimeRange(start_time, end_time)}`
+            );
+            showToast(activityError
+                ? `Appointment saved, but activity logging failed: ${activityError.message}`
+                : `Appointment booked for ${selectedPatient?.full_name || 'patient'}!`);
         }
 
         appData.appointments = await fetchAppointments();
+        appData.appointmentsError = '';
+        renderDashboardMetrics();
         appData.activities = await fetchActivities();
 
         const [year, month, day] = date.split('-').map(Number);
@@ -594,8 +751,17 @@ async function deleteAppointment(id) {
         if (error) throw error;
 
         appData.appointments = appData.appointments.filter(item => String(item.id) !== String(id));
+        appData.appointmentsTotal = Math.max(0, appData.appointmentsTotal - 1);
+        appData.appointmentsError = '';
+        renderDashboardMetrics();
         renderMiniCalendar();
-        showToast('Appointment deleted.');
+        const activityError = await recordActivity(
+            `Deleted appointment for ${appointment.patient} on ${appointment.date}`,
+            `${appointment.service} with ${appointment.doctor} at ${appointment.time}`
+        );
+        showToast(activityError
+            ? `Appointment deleted, but activity logging failed: ${activityError.message}`
+            : 'Appointment deleted.');
     } catch (error) {
         console.error('Error deleting appointment:', error);
         showToast(`Failed to delete appointment: ${error.message}`);
@@ -622,8 +788,15 @@ async function completeAppointment(id) {
         if (error) throw error;
 
         appointment.status = 'Completed';
+        renderDashboardMetrics();
         renderMiniCalendar();
-        showToast(`Appointment for ${appointment.patient} marked completed.`);
+        const activityError = await recordActivity(
+            `Completed appointment for ${appointment.patient} on ${appointment.date}`,
+            `${appointment.service} with ${appointment.doctor} at ${appointment.time}`
+        );
+        showToast(activityError
+            ? `Appointment completed, but activity logging failed: ${activityError.message}`
+            : `Appointment for ${appointment.patient} marked completed.`);
     } catch (error) {
         console.error('Error updating appointment:', error);
         showToast(`Failed to update status: ${error.message}`);
@@ -647,7 +820,13 @@ async function resolveInquiry(id) {
 
         inq.status = 'Responded';
         renderInquiriesAndFeedback();
-        showToast('Reply saved successfully.');
+        const activityError = await recordActivity(
+            `Resolved inquiry from ${inq.patient}`,
+            'Marked the inquiry as responded.'
+        );
+        showToast(activityError
+            ? `Inquiry resolved, but activity logging failed: ${activityError.message}`
+            : 'Reply saved successfully.');
     } catch (error) {
         console.error('Error resolving inquiry:', error);
         showToast(`Failed to update inquiry: ${error.message}`);
