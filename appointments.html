@@ -1,16 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Appointments | Baby Dudu Docs</title>
-
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script>
         tailwind.config = {
             theme: {
@@ -34,519 +29,223 @@
             }
         }
     </script>
-
     <!-- Google Font Inter -->
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
-    <!-- Chart.js -->
+    <!-- Chart.js for Reports -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- XLSX -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
+<script>
+// Preserve existing locally saved clinic data after the brand rename.
+(function(){
+ const keys = ['youcare_doctors', 'youcare_patients', 'youcare_inquiries', 'youcare_feedback', 'youcare_activities', 'youcare_settings', 'youcare_appearance'];
+ keys.forEach(function(oldKey){
+   const newKey = oldKey.replace('youcare_', 'babydududocs_');
+   if (localStorage.getItem(newKey) === null && localStorage.getItem(oldKey) !== null) {
+     localStorage.setItem(newKey, localStorage.getItem(oldKey));
+   }
+ });
+})();
+</script>
 </head>
+<body class="bg-bgSoft min-h-screen text-slate-800 flex flex-col" data-page="appointments">
 
-<body class="bg-bgSoft min-h-screen text-slate-800 flex flex-col"
-    data-page="appointments">
-
-    <!-- ==========================================
-         TOP NAVBAR
-    =========================================== -->
-
-    <header
-        class="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
-
+    <!-- TOP NAVBAR -->
+    <header class="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-4 sm:px-8 py-3 flex items-center justify-between shadow-sm">
         <!-- Logo -->
-        <div class="flex items-center gap-3 cursor-pointer"
-            onclick="switchTab('dashboard')"
-            data-page-link="dashboard">
-
-            <img src="./images/babydududocslogo.jpg"
-                alt="Baby Dudu Docs clinic logo"
-                class="w-12 h-12 rounded-full object-cover border border-slate-200 bg-white">
-
-            <span class="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-                Baby Dudu Docs
-            </span>
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')" data-page-link="dashboard">
+            <img src="./images/babydududocslogo.jpg" alt="Baby Dudu Docs clinic logo" class="w-12 h-12 rounded-full object-cover border border-slate-200 bg-white">
+            <span class="text-lg sm:text-xl font-bold tracking-tight text-slate-900">Baby Dudu Docs</span>
         </div>
 
-        <!-- Desktop Navigation -->
-        <nav
-            class="hidden md:flex items-center bg-slate-100/80 p-1.5 rounded-full border border-slate-200/60 gap-1">
-
-            <button onclick="switchTab('dashboard')"
-                data-page-link="dashboard"
-                id="nav-dashboard"
-                class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
-                Dashboard
-            </button>
-
-            <button onclick="switchTab('patients')"
-                data-page-link="patients"
-                id="nav-patients"
-                class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
-                Patient
-            </button>
-
-            <button onclick="switchTab('appointments')"
-                data-page-link="appointments"
-                id="nav-appointments"
-                class="tab-pill px-5 py-2 rounded-full text-sm font-medium bg-brand-600 text-white shadow-sm">
-                Appointment
-            </button>
-
-            <button onclick="switchTab('reports')"
-                data-page-link="reports"
-                id="nav-reports"
-                class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
-                Report
-            </button>
-
-            <button onclick="switchTab('inquiries')"
-                data-page-link="inquiries"
-                id="nav-inquiries"
-                class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
-
+        <!-- Central Navigation Pills -->
+        <nav class="hidden md:flex items-center bg-slate-100/80 p-1.5 rounded-full border border-slate-200/60 gap-1">
+            <button onclick="switchTab('dashboard')" data-page-link="dashboard" id="nav-dashboard" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Dashboard</button>
+            <button onclick="switchTab('patients')" data-page-link="patients" id="nav-patients" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Patient</button>
+            <button onclick="switchTab('appointments')" data-page-link="appointments" id="nav-appointments" class="tab-pill px-5 py-2 rounded-full text-sm font-medium bg-brand-600 text-white shadow-sm">Appointment</button>
+            <button onclick="switchTab('reports')" data-page-link="reports" id="nav-reports" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Report</button>
+            <button onclick="switchTab('inquiries')" data-page-link="inquiries" id="nav-inquiries" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
                 Inquiries
-
-                <span id="badge-inquiries"
-                    class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full">
-                </span>
+                <span id="badge-inquiries" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
             </button>
-
-            <button onclick="switchTab('staff')"
-                data-page-link="staff"
-                id="nav-staff"
-                class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
-                Staff
-            </button>
+            <button onclick="switchTab('staff')" data-page-link="staff" id="nav-staff" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Staff</button>
         </nav>
 
-        <!-- User Actions -->
+        <!-- User Actions & Profile -->
         <div class="flex items-center gap-3">
-
-            <button id="settings-nav-button"
-                onclick="switchTab('settings')"
-                data-page-link="settings"
-                aria-label="Settings"
-                title="Settings"
-                aria-pressed="false"
-                class="settings-nav-button w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
-
+            
+            <button id="settings-nav-button" onclick="switchTab('settings')" data-page-link="settings" aria-label="Settings" title="Settings" aria-pressed="false" class="settings-nav-button w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
                 <i data-lucide="settings" class="w-4 h-4"></i>
             </button>
-
+            
             <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
-
-                <img src="./images/babydududocslogo.jpg"
-                    alt="Clinic Staff"
-                    class="w-9 h-9 rounded-full object-cover border border-brand-500">
-
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" alt="User Profile" class="w-9 h-9 rounded-full object-cover border border-brand-500">
                 <div class="hidden sm:block text-left text-xs">
-                    <p class="font-semibold text-slate-800"
-                        id="current-user-name">
-                        Clinic Staff
-                    </p>
-
-                    <p class="text-slate-500"
-                        id="current-user-role">
-                        Authorized Staff
-                    </p>
+                    <p class="font-semibold text-slate-800" id="current-user-name">Dr. Sarah Jenkins</p>
+                    <p class="text-slate-500" id="current-user-role">Head Admin</p>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- ==========================================
-         MOBILE NAVIGATION
-    =========================================== -->
-
-    <div
-        class="mobile-navigation md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-medium overflow-x-auto">
-
-        <button onclick="switchTab('dashboard')"
-            data-page-link="dashboard"
-            class="py-1 px-3 text-slate-600">
-            Dashboard
-        </button>
-
-        <button onclick="switchTab('patients')"
-            data-page-link="patients"
-            class="py-1 px-3 text-slate-600">
-            Patient
-        </button>
-
-        <button onclick="switchTab('appointments')"
-            data-page-link="appointments"
-            class="py-1 px-3 bg-brand-600 text-white rounded-full">
-            Appointment
-        </button>
-
-        <button onclick="switchTab('reports')"
-            data-page-link="reports"
-            class="py-1 px-3 text-slate-600">
-            Report
-        </button>
-
-        <button onclick="switchTab('inquiries')"
-            data-page-link="inquiries"
-            class="py-1 px-3 text-slate-600">
-            Inquiries
-        </button>
-
-        <button onclick="switchTab('staff')"
-            data-page-link="staff"
-            class="py-1 px-3 text-slate-600">
-            Staff
-        </button>
-
-        <button onclick="switchTab('settings')"
-            data-page-link="settings"
-            class="py-1 px-3 text-slate-600">
-            Settings
-        </button>
+    <!-- MOBILE NAVIGATION (Visible on small screens) -->
+    <div class="mobile-navigation md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-medium overflow-x-auto">
+        <button onclick="switchTab('dashboard')" data-page-link="dashboard" class="py-1 px-3 text-slate-600">Dashboard</button>
+        <button onclick="switchTab('patients')" data-page-link="patients" class="py-1 px-3 text-slate-600">Patient</button>
+        <button onclick="switchTab('appointments')" data-page-link="appointments" class="py-1 px-3 bg-brand-600 text-white rounded-full">Appointment</button>
+        <button onclick="switchTab('reports')" data-page-link="reports" class="py-1 px-3 text-slate-600">Report</button>
+        <button onclick="switchTab('inquiries')" data-page-link="inquiries" class="py-1 px-3 text-slate-600">Inquiries</button>
+        <button onclick="switchTab('staff')" data-page-link="staff" class="py-1 px-3 text-slate-600">Staff</button>
+        <button onclick="switchTab('settings')" data-page-link="settings" class="py-1 px-3 text-slate-600">Settings</button>
     </div>
 
-    <!-- ==========================================
-         MAIN CONTENT
-    =========================================== -->
-
+    <!-- MAIN APP CONTAINER -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-
-        <section id="section-appointments" class="space-y-6">
-
-            <!-- Page Header -->
+<section id="section-appointments" class="space-y-6">
+            <!-- Top Action Toolbar -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-
-                <h1 class="text-3xl font-bold tracking-tight text-slate-900">
-                    Appointment
-                </h1>
-
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Appointment</h1>
                 <div class="flex items-center gap-3">
-
-                    <!-- Add New Appointment -->
-                    <button
-                        type="button"
-                        onclick="openNewAppointmentModal()"
-                        class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 transition">
-
+                    <button onclick="openNewAppointmentModal()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-2xl font-semibold shadow-md shadow-brand-500/20 transition">
                         <i data-lucide="plus" class="w-5 h-5"></i>
-
-                        <span class="appointment-add-label">
-                            Add New
-                        </span>
+                        <span class="appointment-add-label">Add New</span>
                     </button>
                 </div>
             </div>
 
-            <!-- ==========================================
-                 CALENDAR LAYOUT
-            =========================================== -->
-
+            <!-- Calendar Main Layout (Split View: Left Sidebar Widget + Right Interactive Schedule Grid) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                <!-- LEFT MINI CALENDAR -->
-                <div class="lg:col-span-3">
-
-                    <div
-                        class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
-
-                        <!-- Calendar Header -->
+                <!-- Left Sidebar Components (3 columns) -->
+                <div class="lg:col-span-3 space-y-6">
+                    <!-- Mini Calendar Card -->
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
                         <div class="flex items-center justify-between">
-
-                            <h3 class="font-semibold text-slate-800 text-sm">
-                                Appointment Calendar
-                            </h3>
-
+                            <h3 class="font-semibold text-slate-800 text-sm">Appointment Calendar</h3>
                             <div class="flex items-center gap-1">
-
-                                <button type="button"
-                                    onclick="changeCalendarMonth(-1)"
-                                    aria-label="Previous month"
-                                    class="p-1 rounded-full hover:bg-slate-100 text-slate-500">
-
-                                    <i data-lucide="chevron-left"
-                                        class="w-4 h-4"></i>
-                                </button>
-
-                                <button type="button"
-                                    onclick="changeCalendarMonth(1)"
-                                    aria-label="Next month"
-                                    class="p-1 rounded-full hover:bg-slate-100 text-slate-500">
-
-                                    <i data-lucide="chevron-right"
-                                        class="w-4 h-4"></i>
-                                </button>
+                                <button type="button" onclick="changeCalendarMonth(-1)" aria-label="Previous month" class="p-1 rounded-full hover:bg-slate-100 text-slate-500"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                <button type="button" onclick="changeCalendarMonth(1)" aria-label="Next month" class="p-1 rounded-full hover:bg-slate-100 text-slate-500"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                             </div>
                         </div>
 
-                        <!-- Weekday Names -->
-                        <div
-                            class="grid grid-cols-7 text-center text-[11px] font-semibold text-slate-400">
+                        <!-- Days Header -->
+                        <div class="grid grid-cols-7 text-center text-[11px] font-semibold text-slate-400">
+                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        </div>
+                        <!-- Mini Calendar Grid -->
+                        <div id="mini-calendar-title" class="text-center text-xs font-semibold text-slate-700"></div>
+                        <div id="mini-calendar-grid" class="grid grid-cols-7 text-center text-xs gap-y-2 font-medium text-slate-700" aria-label="Calendar dates"></div>
+                    </div>
 
-                            <span>Mon</span>
-                            <span>Tue</span>
-                            <span>Wed</span>
-                            <span>Thu</span>
-                            <span>Fri</span>
-                            <span>Sat</span>
-                            <span>Sun</span>
+                    <!-- Doctor Schedule Sidebar -->
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-slate-800 text-sm">Doctor Schedule</h3>
+                            <button class="text-slate-400 hover:text-slate-600"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
                         </div>
 
-                        <!-- Month Title -->
-                        <div id="mini-calendar-title"
-                            class="text-center text-xs font-semibold text-slate-700">
+                        <div class="space-y-3" id="doctor-list-container">
+                            <!-- Populated via JS -->
                         </div>
 
-                        <!-- Calendar Dates -->
-                        <div id="mini-calendar-grid"
-                            class="grid grid-cols-7 text-center text-xs gap-y-2 font-medium text-slate-700"
-                            aria-label="Calendar dates">
-                        </div>
+                        <button onclick="switchTab('staff')" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-2xl shadow-sm transition">
+                            See All
+                        </button>
                     </div>
                 </div>
 
-                <!-- RIGHT WEEKLY CALENDAR -->
-                <div
-                    class="lg:col-span-9 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 overflow-x-auto relative">
-
+                <!-- Right Main Weekly Interactive Schedule Grid (9 columns) -->
+                <div class="lg:col-span-9 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 overflow-x-auto relative">
                     <!-- Calendar Header Controls -->
-                    <div
-                        class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-4 border-b border-slate-100 gap-4">
-
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-4 border-b border-slate-100 gap-4">
                         <div class="flex items-center gap-4">
-
-                            <h2 id="schedule-calendar-title"
-                                class="text-xl font-bold text-slate-900">
-                                Appointment Schedule
-                            </h2>
-
-                            <span id="schedule-calendar-period"
-                                class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full border border-slate-200">
-                                Today
-                            </span>
-
-                            <!-- Week Navigation -->
+                            <h2 id="schedule-calendar-title" class="text-xl font-bold text-slate-900">Appointment Schedule</h2>
+                            <span id="schedule-calendar-period" class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full border border-slate-200">Today</span>
                             <div class="schedule-nav-controls flex items-center gap-2 shrink-0">
-
-                                <button type="button"
-                                    onclick="shiftScheduleDate(-7)"
-                                    aria-label="Previous week"
-                                    title="Previous week"
-                                    class="schedule-nav-button inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
-
-                                    <i data-lucide="chevron-left"
-                                        class="w-4 h-4"></i>
-                                </button>
-
-                                <button type="button"
-                                    onclick="shiftScheduleDate(7)"
-                                    aria-label="Next week"
-                                    title="Next week"
-                                    class="schedule-nav-button inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
-
-                                    <i data-lucide="chevron-right"
-                                        class="w-4 h-4"></i>
-                                </button>
+                                <button type="button" onclick="shiftScheduleDate(-7)" aria-label="Previous week" title="Previous week" class="schedule-nav-button inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                <button type="button" onclick="shiftScheduleDate(7)" aria-label="Next week" title="Next week" class="schedule-nav-button inline-flex items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
                             </div>
                         </div>
+
+
                     </div>
 
-                    <!-- Weekly Schedule -->
+                    <!-- Weekly Time Slots Table -->
                     <div class="min-w-[700px]">
-
-                        <!-- Days Header -->
-                        <div id="schedule-week-header"
-                            class="grid grid-cols-8 text-xs font-semibold text-slate-500 text-center pb-3 border-b border-slate-100">
-
-                            <div class="text-slate-400">GMT+8</div>
-                            <div>MON</div>
-                            <div>TUE</div>
-                            <div>WED</div>
-                            <div>THU</div>
-                            <div>FRI</div>
-                            <div>SAT</div>
-                            <div>SUN</div>
+                        <!-- Column Days Header -->
+                        <div id="schedule-week-header" class="grid grid-cols-8 text-xs font-semibold text-slate-500 text-center pb-3 border-b border-slate-100">
+                            <div class="text-slate-400">GMT+8</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div><div>SUN</div>
                         </div>
 
-                        <!-- Empty Appointment Time Slots -->
-                        <div class="relative divide-y divide-slate-100 text-xs"
-                            id="interactive-schedule-grid">
-                        </div>
+                        <!-- Time Rows & Event Canvas -->
+                        <div class="relative divide-y divide-slate-100 text-xs" id="interactive-schedule-grid"></div>
                     </div>
+
                 </div>
             </div>
         </section>
     </main>
-
-    <!-- ==========================================
-         ADD NEW APPOINTMENT MODAL
-    =========================================== -->
-
-    <div id="modal-book-appointment"
-        class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-
-        <div
-            class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
-
-            <!-- Modal Header -->
+    <!-- MODAL 1: Book New Appointment Modal -->
+    <div id="modal-book-appointment" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-
-                <h3 id="book-appointment-modal-title"
-                    class="font-bold text-slate-800 text-lg">
-                    Book New Appointment
-                </h3>
-
-                <button type="button"
-                    onclick="closeModal('modal-book-appointment')"
-                    class="text-slate-400 hover:text-slate-600"
-                    aria-label="Close modal">
-
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+            <h3 id="book-appointment-modal-title" class="font-bold text-slate-800 text-lg">Book New Appointment</h3>
+                <button onclick="closeModal('modal-book-appointment')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Booking Form -->
-            <form onsubmit="handleBookAppointment(event)"
-                novalidate
-                class="space-y-4 text-xs">
-
-                <input type="hidden" id="book-appointment-id">
-
-                <!-- Patient -->
-                <div>
-                    <label for="book-patient-select"
-                        class="block font-semibold text-slate-700 mb-1">
-                        Select Patient
-                    </label>
-
-                    <select id="book-patient-select"
-                        class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-
-                        <option value="">Select a patient</option>
+            <form onsubmit="handleBookAppointment(event)" class="space-y-4 text-xs">
+            <input type="hidden" id="book-appointment-id">
+            <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Select Patient</label>
+                    <select id="book-patient-select" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <!-- Dynamic options -->
                     </select>
                 </div>
 
-                <!-- Doctor and Service -->
                 <div class="grid grid-cols-2 gap-3">
-
                     <div>
-                        <label for="book-doctor-select"
-                            class="block font-semibold text-slate-700 mb-1">
-                            Assigned Doctor
-                        </label>
-
-                        <select id="book-doctor-select"
-                            class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-
-                            <option value="">Select a doctor</option>
+                        <label class="block font-semibold text-slate-700 mb-1">Assigned Doctor</label>
+                        <select id="book-doctor-select" required onchange="populateServiceTypes(); refreshAppointmentTimeSlots(document.getElementById('book-appointment-id').value)" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <!-- Dynamic options -->
                         </select>
                     </div>
-
                     <div>
-                        <label for="book-service-type"
-                            class="block font-semibold text-slate-700 mb-1">
-                            Service Type
-                        </label>
+                        <label class="block font-semibold text-slate-700 mb-1">Service Type</label>
+                        <select id="book-service-type" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
+                    </div>
+                </div>
 
-                        <select id="book-service-type"
-                            class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-
-                            <option value="">Select a service</option>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Date</label>
+                        <input type="date" id="book-date" required onchange="refreshAppointmentTimeSlots(document.getElementById('book-appointment-id').value)" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Time Slot</label>
+                        <select id="book-time" required class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="">Select a doctor and date first</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Date and Time -->
-                <div class="grid grid-cols-2 gap-3">
-
-                    <div>
-                        <label for="book-date"
-                            class="block font-semibold text-slate-700 mb-1">
-                            Date
-                        </label>
-
-                        <input type="date"
-                            id="book-date"
-                            class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                    </div>
-
-                    <div>
-                        <label for="book-time"
-                            class="block font-semibold text-slate-700 mb-1">
-                            Time Slot
-                        </label>
-
-                        <select id="book-time"
-                            class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-
-                            <option value="">Select a time</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Notes -->
                 <div>
-                    <label for="book-notes"
-                        class="block font-semibold text-slate-700 mb-1">
-                        Notes / Special Instructions
-                    </label>
-
-                    <textarea id="book-notes"
-                        rows="3"
-                        placeholder="Enter reason for visit or patient history..."
-                        class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                    </textarea>
+                    <label class="block font-semibold text-slate-700 mb-1">Notes / Special Instructions</label>
+                    <textarea id="book-notes" rows="3" placeholder="Enter reason for visit or patient history..." class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
                 </div>
 
-                <!-- Modal Buttons -->
-                <div
-                    class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-
-                    <button type="button"
-                        onclick="closeModal('modal-book-appointment')"
-                        class="px-4 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">
-
-                        Cancel
-                    </button>
-
-                    <button id="book-appointment-submit"
-                        type="submit"
-                        class="px-5 py-2 rounded-xl font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">
-
-                        Confirm Booking
-                    </button>
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('modal-book-appointment')" class="px-4 py-2 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+                    <button id="book-appointment-submit" type="submit" class="px-5 py-2 rounded-xl font-semibold bg-brand-600 text-white shadow-md hover:bg-brand-700">Confirm Booking</button>
                 </div>
             </form>
         </div>
     </div>
-
-    <!-- ==========================================
-         TOAST NOTIFICATION
-    =========================================== -->
-
-    <div id="toast"
-        class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-semibold pointer-events-none">
-
-        <i data-lucide="check-circle-2"
-            class="w-5 h-5 text-emerald-400"></i>
-
-        <span id="toast-message">
-            Action saved successfully!
-        </span>
+    <!-- TOAST NOTIFICATION BANNER -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-semibold pointer-events-none">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toast-message">Action saved successfully!</span>
     </div>
-
-    <!-- ==========================================
-         JAVASCRIPT
-    =========================================== -->
-
-    <script src="appointments.js"></script>
-
+    <script src="app.js"></script>
 </body>
 </html>
