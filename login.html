@@ -1,11 +1,9 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Baby Dudu Docs - Log In</title>
 
     <style>
@@ -27,23 +25,17 @@
             padding: 1rem;
         }
 
-        /* LOGIN CONTAINER CARD */
+        /* LOGIN CONTAINER */
         .login-card {
             display: flex;
             flex-direction: column;
             width: 900px;
             max-width: 100%;
-            background-color: #ffffff;
+            background: #ffffff;
             border-radius: 1.5rem;
             overflow: hidden;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             border: 1px solid #f8fafc;
-        }
-
-        @media (min-width: 768px) {
-            .login-card {
-                flex-direction: row;
-            }
         }
 
         /* LEFT BLUE PANEL */
@@ -57,13 +49,6 @@
             justify-content: space-between;
         }
 
-        @media (min-width: 768px) {
-            .welcome-panel {
-                width: 50%;
-            }
-        }
-
-        /* BRAND LOGO AND NAME */
         .brand-box {
             display: flex;
             align-items: center;
@@ -77,7 +62,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #ffffff;
+            background: white;
             border-radius: 0.75rem;
             padding: 0.2rem;
             overflow: hidden;
@@ -120,13 +105,6 @@
             justify-content: center;
         }
 
-        @media (min-width: 768px) {
-            .form-panel {
-                width: 50%;
-                padding: 2.5rem;
-            }
-        }
-
         .form-title {
             font-size: 1.25rem;
             font-weight: 700;
@@ -138,9 +116,10 @@
             font-size: 0.75rem;
             color: #94a3b8;
             margin-bottom: 1.5rem;
+            line-height: 1.6;
         }
 
-        /* FORM ELEMENTS */
+        /* FORMS */
         .login-form {
             display: flex;
             flex-direction: column;
@@ -166,7 +145,7 @@
             border: 1px solid #e2e8f0;
             border-radius: 0.75rem;
             outline: none;
-            background-color: rgba(248, 250, 252, 0.5);
+            background: rgba(248, 250, 252, 0.5);
             font-size: 0.75rem;
             color: #1e293b;
             transition: all 0.2s ease;
@@ -174,7 +153,7 @@
 
         .text-input:focus {
             border-color: #2563eb;
-            background-color: #ffffff;
+            background: white;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
@@ -187,10 +166,9 @@
         }
 
         .password-wrapper .text-input {
-            padding-right: 2.8rem;
+            padding-right: 3.5rem;
         }
 
-        /* SHOW / HIDE PASSWORD BUTTON */
         .toggle-password {
             position: absolute;
             right: 0.75rem;
@@ -198,26 +176,18 @@
             transform: translateY(-50%);
             border: none;
             background: transparent;
-            color: #94a3b8;
+            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 600;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 0.25rem;
-            transition: color 0.2s ease;
         }
 
         .toggle-password:hover {
             color: #2563eb;
         }
 
-        .toggle-password:focus-visible {
-            outline: 2px solid #2563eb;
-            outline-offset: 3px;
-            border-radius: 4px;
-        }
-
-        /* FORM EXTRAS */
+        /* REMEMBER ME */
         .form-extras {
             display: flex;
             align-items: center;
@@ -238,54 +208,108 @@
         .checkbox-input {
             width: 1rem;
             height: 1rem;
-            border-radius: 0.25rem;
-            border: 1px solid #cbd5e1;
             accent-color: #2563eb;
             cursor: pointer;
         }
 
-        .forgot-link {
+        .forgot-link,
+        .back-link {
             color: #2563eb;
             text-decoration: none;
-            font-weight: 500;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        .forgot-link:hover {
+        .forgot-link:hover,
+        .back-link:hover {
             text-decoration: underline;
         }
 
-        /* SIGN IN BUTTON */
+        /* BUTTON */
         .submit-btn {
             width: 100%;
             height: 2.75rem;
             margin-top: 0.5rem;
             border: none;
             border-radius: 0.75rem;
-            background-color: #2563eb;
+            background: #2563eb;
             color: #ffffff;
             font-size: 0.75rem;
             font-weight: 700;
             box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.25);
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            transition: background 0.2s ease;
         }
 
         .submit-btn:hover {
-            background-color: #1d4ed8;
+            background: #1d4ed8;
         }
 
         .submit-btn:disabled {
-            background-color: #93c5fd;
+            background: #93c5fd;
             cursor: not-allowed;
         }
 
-        /* ERROR MESSAGE */
-        .login-error {
+        /* FORM SWITCHING */
+        .auth-section {
             display: none;
-            color: #b91c1c;
-            font-size: 0.75rem;
-            line-height: 1.5;
+        }
+
+        .auth-section.active {
+            display: block;
+        }
+
+        .back-container {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        /* MESSAGES */
+        .message {
+            display: none;
+            padding: 0.75rem;
+            border-radius: 0.65rem;
             margin-top: 1rem;
+            font-size: 0.75rem;
+            line-height: 1.6;
+        }
+
+        .message.error {
+            display: block;
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .message.success {
+            display: block;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .message.info {
+            display: block;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        /* RESPONSIVE */
+        @media (min-width: 768px) {
+            .login-card {
+                flex-direction: row;
+            }
+
+            .welcome-panel {
+                width: 50%;
+            }
+
+            .form-panel {
+                width: 50%;
+                padding: 2.5rem;
+            }
         }
 
         @media (max-width: 480px) {
@@ -298,23 +322,17 @@
                 flex-wrap: wrap;
             }
         }
-
     </style>
 </head>
 
 <body>
 
-    <!-- LOGIN CONTAINER CARD -->
     <div class="login-card">
 
-        <!-- LEFT BLUE PANEL -->
+        <!-- LEFT PANEL -->
         <section class="welcome-panel">
-
             <div>
-
-                <!-- BRAND LOGO / NAME -->
                 <div class="brand-box">
-
                     <div class="brand-icon">
                         <img
                             src="images/babydududocslogo.jpg"
@@ -325,10 +343,8 @@
                     <span class="brand-name">
                         Baby Dudu Docs
                     </span>
-
                 </div>
 
-                <!-- HEADLINE -->
                 <h1 class="welcome-title">
                     Clinic Management Portal
                 </h1>
@@ -339,311 +355,764 @@
                     and healthcare staff analytics in one
                     unified platform.
                 </p>
+            </div>
+        </section>
 
+        <!-- RIGHT PANEL -->
+        <section class="form-panel">
+
+            <!-- ========================= -->
+            <!-- LOGIN SECTION -->
+            <!-- ========================= -->
+            <div id="loginSection" class="auth-section active">
+
+                <h2 class="form-title">
+                    Sign in to your account
+                </h2>
+
+                <p class="form-subtitle">
+                    Enter your credentials to access the portal.
+                </p>
+
+                <form id="loginForm" class="login-form">
+
+                    <div class="input-group">
+                        <label for="email" class="input-label">
+                            Email Address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            class="text-input"
+                            placeholder="Enter your email"
+                            autocomplete="username"
+                            required
+                        >
+                    </div>
+
+                    <div class="input-group">
+                        <label for="password" class="input-label">
+                            Password
+                        </label>
+
+                        <div class="password-wrapper">
+                            <input
+                                type="password"
+                                id="password"
+                                class="text-input"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                class="toggle-password"
+                                data-target="password"
+                                aria-label="Show password"
+                            >
+                                Show
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-extras">
+
+                        <label class="checkbox-label">
+                            <input
+                                type="checkbox"
+                                id="remember"
+                                class="checkbox-input"
+                            >
+                            Remember me
+                        </label>
+
+                        <a
+                            href="#forgot"
+                            id="forgotLink"
+                            class="forgot-link"
+                        >
+                            Forgot password?
+                        </a>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="loginButton"
+                        class="submit-btn"
+                    >
+                        Sign In
+                    </button>
+                </form>
+
+                <p id="loginMessage" class="message" role="alert"></p>
+            </div>
+
+            <!-- ========================= -->
+            <!-- FORGOT PASSWORD SECTION -->
+            <!-- ========================= -->
+            <div id="forgotSection" class="auth-section">
+
+                <h2 class="form-title">
+                    Forgot your password?
+                </h2>
+
+                <p class="form-subtitle">
+                    Enter your registered email address.
+                    We will automatically send a password
+                    reset link to your email.
+                </p>
+
+                <form id="forgotForm" class="login-form">
+
+                    <div class="input-group">
+                        <label for="forgotEmail" class="input-label">
+                            Email Address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="forgotEmail"
+                            class="text-input"
+                            placeholder="Enter your registered email"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="forgotButton"
+                        class="submit-btn"
+                    >
+                        Send Reset Link
+                    </button>
+                </form>
+
+                <p
+                    id="forgotMessage"
+                    class="message"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+
+                <div class="back-container">
+                    <a href="#login" class="back-link" data-back-login>
+                        ← Back to Login
+                    </a>
+                </div>
+            </div>
+
+            <!-- ========================= -->
+            <!-- RESET PASSWORD SECTION -->
+            <!-- ========================= -->
+            <div id="resetSection" class="auth-section">
+
+                <h2 class="form-title">
+                    Create a new password
+                </h2>
+
+                <p class="form-subtitle">
+                    Enter your new password below.
+                    Make sure both passwords match.
+                </p>
+
+                <form id="resetForm" class="login-form">
+
+                    <div class="input-group">
+                        <label for="newPassword" class="input-label">
+                            New Password
+                        </label>
+
+                        <div class="password-wrapper">
+                            <input
+                                type="password"
+                                id="newPassword"
+                                class="text-input"
+                                placeholder="Enter new password"
+                                autocomplete="new-password"
+                                minlength="8"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                class="toggle-password"
+                                data-target="newPassword"
+                                aria-label="Show new password"
+                            >
+                                Show
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="confirmPassword" class="input-label">
+                            Confirm New Password
+                        </label>
+
+                        <div class="password-wrapper">
+                            <input
+                                type="password"
+                                id="confirmPassword"
+                                class="text-input"
+                                placeholder="Confirm new password"
+                                autocomplete="new-password"
+                                minlength="8"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                class="toggle-password"
+                                data-target="confirmPassword"
+                                aria-label="Show confirmation password"
+                            >
+                                Show
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="resetButton"
+                        class="submit-btn"
+                        disabled
+                    >
+                        Verifying Reset Link...
+                    </button>
+                </form>
+
+                <p
+                    id="resetMessage"
+                    class="message"
+                    role="status"
+                    aria-live="polite"
+                ></p>
+
+                <div class="back-container">
+                    <a href="#login" class="back-link" data-back-login>
+                        ← Back to Login
+                    </a>
+                </div>
             </div>
 
         </section>
-
-
-        <!-- RIGHT FORM PANEL -->
-        <section class="form-panel">
-
-            <h2 class="form-title">
-                Sign in to your account
-            </h2>
-
-            <p class="form-subtitle">
-                Enter your credentials to access the portal.
-            </p>
-
-
-            <!-- LOGIN FORM -->
-            <form onsubmit="handleLogin(event)" class="login-form">
-
-                <!-- EMAIL FIELD -->
-                <div class="input-group">
-
-                    <label for="email" class="input-label">
-                        Email Address
-                    </label>
-
-                    <input
-                        type="email"
-                        id="email"
-                        required
-                        class="text-input"
-                        placeholder="Enter your email"
-                        autocomplete="username"
-                    >
-
-                </div>
-
-
-                <!-- PASSWORD FIELD -->
-                <div class="input-group">
-
-                    <label for="password" class="input-label">
-                        Password
-                    </label>
-
-                    <div class="password-wrapper">
-
-                        <input
-                            type="password"
-                            id="password"
-                            required
-                            class="text-input"
-                            placeholder="Enter your password"
-                            autocomplete="current-password"
-                        >
-
-                        <!-- VIEW PASSWORD BUTTON -->
-                        <button
-                            type="button"
-                            class="toggle-password"
-                            id="togglePassword"
-                            aria-label="Show password"
-                            title="Show password"
-                            aria-pressed="false"
-                        >
-
-                            <!-- EYE ICON -->
-                            <svg
-                                id="eyeIcon"
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="19"
-                                height="19"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <!-- REMEMBER ME & FORGOT PASSWORD -->
-                <div class="form-extras">
-
-                    <label class="checkbox-label">
-
-                        <input
-                            type="checkbox"
-                            id="remember"
-                            class="checkbox-input"
-                        >
-
-                        Remember me
-
-                    </label>
-
-                    <a
-                        href="#"
-                        onclick="alert('Please contact your administrator to reset your password.'); return false;"
-                        class="forgot-link"
-                    >
-                        Forgot password?
-                    </a>
-
-                </div>
-
-
-                <!-- SUBMIT BUTTON -->
-                <button type="submit" class="submit-btn">
-                    Sign In
-                </button>
-
-            </form>
-
-
-            <!-- ERROR MESSAGE -->
-            <p id="login-error" class="login-error" role="alert"></p>
-
-        </section>
-
     </div>
 
-
-    <!-- JAVASCRIPT / SUPABASE -->
+    <!-- SUPABASE -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabaseClient.js"></script>
 
     <script>
+        // =====================================
+        // ELEMENTS
+        // =====================================
 
-        // =====================================
-        // REMEMBER ME - LOAD SAVED EMAIL
-        // =====================================
+        const loginSection = document.getElementById("loginSection");
+        const forgotSection = document.getElementById("forgotSection");
+        const resetSection = document.getElementById("resetSection");
 
         const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
         const rememberCheckbox = document.getElementById("remember");
+
+        const loginForm = document.getElementById("loginForm");
+        const forgotForm = document.getElementById("forgotForm");
+        const resetForm = document.getElementById("resetForm");
+
+        const loginButton = document.getElementById("loginButton");
+        const forgotButton = document.getElementById("forgotButton");
+        const resetButton = document.getElementById("resetButton");
+
+        const loginMessage = document.getElementById("loginMessage");
+        const forgotMessage = document.getElementById("forgotMessage");
+        const resetMessage = document.getElementById("resetMessage");
+
+        const forgotEmail = document.getElementById("forgotEmail");
+        const newPassword = document.getElementById("newPassword");
+        const confirmPassword = document.getElementById("confirmPassword");
+
+        // Recovery mode is only enabled after Supabase
+        // establishes a valid password recovery session.
+        let recoveryVerified = false;
+        let recoveryInProgress = false;
+
+        // =====================================
+        // SWITCH FORMS
+        // =====================================
+
+        function showSection(section) {
+            loginSection.classList.remove("active");
+            forgotSection.classList.remove("active");
+            resetSection.classList.remove("active");
+
+            section.classList.add("active");
+        }
+
+        function showMessage(element, text, type) {
+            element.textContent = text;
+            element.className = "message " + type;
+        }
+
+        function clearMessage(element) {
+            element.textContent = "";
+            element.className = "message";
+        }
+
+        function showLogin() {
+            recoveryVerified = false;
+            recoveryInProgress = false;
+            resetButton.disabled = true;
+            resetForm.reset();
+
+            clearMessage(loginMessage);
+            clearMessage(forgotMessage);
+            clearMessage(resetMessage);
+
+            showSection(loginSection);
+        }
+
+        // =====================================
+        // REMEMBER ME
+        // =====================================
 
         const savedEmail = localStorage.getItem("rememberedEmail");
 
-        // Automatically display saved email
         if (savedEmail) {
             emailInput.value = savedEmail;
             rememberCheckbox.checked = true;
         }
 
-
         // =====================================
         // SHOW / HIDE PASSWORD
         // =====================================
 
-        const passwordInput = document.getElementById("password");
-        const togglePassword = document.getElementById("togglePassword");
-        const eyeIcon = document.getElementById("eyeIcon");
+        document.querySelectorAll(".toggle-password").forEach(button => {
+            button.addEventListener("click", function () {
+                const input = document.getElementById(this.dataset.target);
 
-        togglePassword.addEventListener("click", function () {
-
-            const isPasswordHidden = passwordInput.type === "password";
-
-            if (isPasswordHidden) {
-
-                // SHOW PASSWORD
-                passwordInput.type = "text";
-
-                togglePassword.setAttribute("aria-label", "Hide password");
-                togglePassword.setAttribute("title", "Hide password");
-                togglePassword.setAttribute("aria-pressed", "true");
-
-                // EYE SLASH ICON
-                eyeIcon.innerHTML = `
-                    <path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/>
-                    <path d="M16.68 16.68A10.94 10.94 0 0 1 12 17
-                    c-6.4 0-10-5-10-5a16.4 16.4 0 0 1 4.3-4.8"/>
-                    <path d="M9.88 5.08A10.94 10.94 0 0 1 12 5
-                    c6.4 0 10 7 10 7a16.7 16.7 0 0 1-2.2 2.8"/>
-                    <line x1="2" y1="2" x2="22" y2="22"/>
-                `;
-
-            } else {
-
-                // HIDE PASSWORD
-                passwordInput.type = "password";
-
-                togglePassword.setAttribute("aria-label", "Show password");
-                togglePassword.setAttribute("title", "Show password");
-                togglePassword.setAttribute("aria-pressed", "false");
-
-                // NORMAL EYE ICON
-                eyeIcon.innerHTML = `
-                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                `;
-
-            }
-
+                if (input.type === "password") {
+                    input.type = "text";
+                    this.textContent = "Hide";
+                    this.setAttribute("aria-label", "Hide password");
+                } else {
+                    input.type = "password";
+                    this.textContent = "Show";
+                    this.setAttribute("aria-label", "Show password");
+                }
+            });
         });
-
 
         // =====================================
         // LOGIN FUNCTION
         // =====================================
 
-        async function handleLogin(event) {
-
+        loginForm.addEventListener("submit", async function (event) {
             event.preventDefault();
 
             const email = emailInput.value.trim();
             const password = passwordInput.value;
             const rememberMe = rememberCheckbox.checked;
 
-            const button = event.currentTarget.querySelector(
-                'button[type="submit"]'
-            );
+            loginButton.disabled = true;
+            loginButton.textContent = "Signing in...";
 
-            const errorMessage = document.getElementById("login-error");
-
-            button.disabled = true;
-            button.textContent = "Signing in...";
-
-            errorMessage.style.display = "none";
-
+            clearMessage(loginMessage);
 
             try {
+                const { data, error } = await db.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
 
-               
-             // SUPABASE LOGIN
-const { data, error } = await db.auth.signInWithPassword({
-    email: email,
-    password: password
-});
+                if (error) throw error;
 
-if (error) {
-    throw error;
-}
+                // Check authorized clinic staff.
+                if (data.user.app_metadata?.role !== "clinic_staff") {
+                    await db.auth.signOut();
 
-// CHECK USER AUTHORIZATION
-const role = data.user.app_metadata?.role;
-
-const allowedRoles = ["admin", "doctor", "clinic_staff"];
-
-if (!allowedRoles.includes(role)) {
-    await db.auth.signOut();
-
-    throw new Error(
-        "This account is not authorized for the clinic portal."
-    );
-}
-
-// ALL AUTHORIZED ROLES CAN ACCESS THE CURRENT DASHBOARD
-console.log("Logged in successfully as:", role);
-
-window.location.href = "dashboard.html";
-
-
-                // =====================================
-                // REMEMBER ME FUNCTION
-                // =====================================
-
-                if (rememberMe) {
-
-                    // SAVE EMAIL
-                    localStorage.setItem("rememberedEmail", email);
-
-                } else {
-
-                    // REMOVE SAVED EMAIL
-                    localStorage.removeItem("rememberedEmail");
-
+                    throw new Error(
+                        "This account is not authorized for the clinic portal."
+                    );
                 }
 
-
-                // =====================================
-                // REDIRECT TO MAIN PAGE
-                // =====================================
+                // Remember email only, never password.
+                if (rememberMe) {
+                    localStorage.setItem("rememberedEmail", email);
+                } else {
+                    localStorage.removeItem("rememberedEmail");
+                }
 
                 window.location.href = "index.html";
 
+            } catch (error) {
+                showMessage(
+                    loginMessage,
+                    error.message || "Sign in failed. Please try again.",
+                    "error"
+                );
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = "Sign In";
+            }
+        });
+
+        // =====================================
+        // OPEN FORGOT PASSWORD FORM
+        // =====================================
+
+        document.getElementById("forgotLink").addEventListener(
+            "click",
+            function (event) {
+                event.preventDefault();
+
+                forgotEmail.value = emailInput.value.trim();
+                clearMessage(forgotMessage);
+                showSection(forgotSection);
+            }
+        );
+
+        // =====================================
+        // AUTOMATIC PASSWORD RESET EMAIL
+        // =====================================
+
+        forgotForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const email = forgotEmail.value.trim();
+
+            forgotButton.disabled = true;
+            forgotButton.textContent = "Sending...";
+
+            clearMessage(forgotMessage);
+
+            try {
+                if (typeof db === "undefined" || !db.auth) {
+                    throw new Error("Supabase client is not initialized.");
+                }
+
+                // Redirect back to this same login.html file.
+                // This supports GitHub Pages repository subfolders.
+                const folderPath = window.location.pathname.substring(
+                    0,
+                    window.location.pathname.lastIndexOf("/") + 1
+                );
+
+                const redirectTo =
+                    window.location.origin + folderPath + "login.html";
+
+                const { error } = await db.auth.resetPasswordForEmail(
+                    email,
+                    {
+                        redirectTo: redirectTo
+                    }
+                );
+
+                if (error) throw error;
+
+                showMessage(
+                    forgotMessage,
+                    "If an account is registered with this email, " +
+                    "password reset instructions have been sent. " +
+                    "Please check your inbox and spam folder.",
+                    "success"
+                );
 
             } catch (error) {
-
-                // DISPLAY ERROR MESSAGE
-                errorMessage.textContent =
-                    error.message || "Sign in failed. Please try again.";
-
-                errorMessage.style.display = "block";
-
-
+                showMessage(
+                    forgotMessage,
+                    error.message || "Unable to send reset email.",
+                    "error"
+                );
             } finally {
-
-                button.disabled = false;
-                button.textContent = "Sign In";
-
+                forgotButton.disabled = false;
+                forgotButton.textContent = "Send Reset Link";
             }
+        });
 
+        // =====================================
+        // PASSWORD RECOVERY CALLBACK
+        // =====================================
+
+        function hasRecoveryParameters() {
+            const hash = new URLSearchParams(
+                window.location.hash.substring(1)
+            );
+
+            const query = new URLSearchParams(
+                window.location.search
+            );
+
+            return (
+                hash.get("type") === "recovery" ||
+                query.get("type") === "recovery" ||
+                query.has("token_hash") ||
+                hash.has("error") ||
+                query.has("error_code") ||
+                query.has("code")
+            );
         }
 
+        function openResetSection() {
+            recoveryInProgress = true;
+            recoveryVerified = false;
+            resetButton.disabled = true;
+            resetButton.textContent = "Verifying Reset Link...";
+
+            showSection(resetSection);
+
+            showMessage(
+                resetMessage,
+                "Verifying your password reset link...",
+                "info"
+            );
+        }
+
+        function enablePasswordReset() {
+            recoveryInProgress = true;
+            recoveryVerified = true;
+            resetButton.disabled = false;
+            resetButton.textContent = "Update Password";
+
+            showSection(resetSection);
+            clearMessage(resetMessage);
+
+            // Remove recovery tokens from the address bar.
+            window.history.replaceState(
+                {},
+                document.title,
+                window.location.pathname
+            );
+        }
+
+        function showRecoveryError(message) {
+            recoveryVerified = false;
+            recoveryInProgress = true;
+
+            resetButton.disabled = true;
+            resetButton.textContent = "Update Password";
+
+            showSection(resetSection);
+
+            showMessage(
+                resetMessage,
+                message || "Your reset link is invalid or expired. " +
+                "Please request a new password reset email.",
+                "error"
+            );
+        }
+
+        // Supabase emits PASSWORD_RECOVERY after a recovery link
+        // is processed and the recovery session is established.
+        db.auth.onAuthStateChange((event, session) => {
+            if (event === "PASSWORD_RECOVERY" && session) {
+                enablePasswordReset();
+            }
+        });
+
+        // =====================================
+        // VERIFY RECOVERY LINK
+        // =====================================
+
+        async function initializeRecovery() {
+            const hash = new URLSearchParams(
+                window.location.hash.substring(1)
+            );
+
+            const query = new URLSearchParams(
+                window.location.search
+            );
+
+            const errorDescription =
+                hash.get("error_description") ||
+                query.get("error_description");
+
+            if (errorDescription) {
+                showRecoveryError(
+                    "Password reset failed: " + errorDescription
+                );
+                return;
+            }
+
+            // Supports token_hash-based Supabase email templates.
+            const tokenHash = query.get("token_hash");
+            const recoveryType =
+                query.get("type") || hash.get("type");
+
+            if (tokenHash && recoveryType === "recovery") {
+                openResetSection();
+
+                try {
+                    const { data, error } = await db.auth.verifyOtp({
+                        token_hash: tokenHash,
+                        type: "recovery"
+                    });
+
+                    if (error) throw error;
+                    if (!data.session) {
+                        throw new Error("No recovery session was returned.");
+                    }
+
+                    enablePasswordReset();
+                } catch (error) {
+                    showRecoveryError(error.message);
+                }
+
+                return;
+            }
+
+            // Supports Supabase PKCE recovery links.
+            // The auth client may already have processed the code
+            // when this function runs.
+            if (query.has("code")) {
+                openResetSection();
+
+                try {
+                    const { data, error } = await db.auth.getSession();
+
+                    if (error) throw error;
+
+                    if (!data.session) {
+                        throw new Error(
+                            "The recovery session could not be verified."
+                        );
+                    }
+
+                    enablePasswordReset();
+                } catch (error) {
+                    showRecoveryError(error.message);
+                }
+
+                return;
+            }
+
+            // Supports standard Supabase recovery links.
+            if (recoveryType === "recovery") {
+                openResetSection();
+
+                try {
+                    const { data, error } = await db.auth.getSession();
+
+                    if (error) throw error;
+
+                    if (!data.session) {
+                        throw new Error(
+                            "The reset link has expired or is invalid."
+                        );
+                    }
+
+                    enablePasswordReset();
+                } catch (error) {
+                    showRecoveryError(error.message);
+                }
+            }
+        }
+
+        // =====================================
+        // UPDATE PASSWORD
+        // =====================================
+
+        resetForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            if (!recoveryVerified) {
+                showRecoveryError(
+                    "Please open a valid password reset link from your email."
+                );
+                return;
+            }
+
+            const password = newPassword.value;
+            const confirm = confirmPassword.value;
+
+            if (password.length < 8) {
+                showMessage(
+                    resetMessage,
+                    "Password must contain at least 8 characters.",
+                    "error"
+                );
+                return;
+            }
+
+            if (password !== confirm) {
+                showMessage(
+                    resetMessage,
+                    "Passwords do not match. Please try again.",
+                    "error"
+                );
+                return;
+            }
+
+            resetButton.disabled = true;
+            resetButton.textContent = "Updating...";
+
+            clearMessage(resetMessage);
+
+            try {
+                const { error } = await db.auth.updateUser({
+                    password: password
+                });
+
+                if (error) throw error;
+
+                recoveryVerified = false;
+                resetForm.reset();
+
+                // Sign out of the temporary recovery session.
+                await db.auth.signOut();
+
+                showSection(loginSection);
+
+                passwordInput.value = "";
+
+                showMessage(
+                    loginMessage,
+                    "Your password has been successfully updated! " +
+                    "You can now sign in with your new password.",
+                    "success"
+                );
+
+            } catch (error) {
+                showMessage(
+                    resetMessage,
+                    error.message || "Unable to update password.",
+                    "error"
+                );
+
+                resetButton.disabled = false;
+            } finally {
+                resetButton.textContent = "Update Password";
+            }
+        });
+
+        // =====================================
+        // BACK TO LOGIN
+        // =====================================
+
+        document.querySelectorAll("[data-back-login]").forEach(link => {
+            link.addEventListener("click", async function (event) {
+                event.preventDefault();
+
+                // End a recovery session when leaving reset mode.
+                if (recoveryInProgress) {
+                    try {
+                        await db.auth.signOut();
+                    } catch (error) {
+                        console.error("Sign out failed:", error);
+                    }
+                }
+
+                window.history.replaceState(
+                    {},
+                    document.title,
+                    window.location.pathname
+                );
+
+                showLogin();
+            });
+        });
 
         // =====================================
         // HANDLE UNAUTHORIZED LOGIN
@@ -654,16 +1123,21 @@ window.location.href = "dashboard.html";
         ).get("error");
 
         if (loginError === "unauthorized") {
-
-            const errorMessage = document.getElementById("login-error");
-
-            errorMessage.textContent =
-                "Sign in with an authorized clinic staff account to access patient records.";
-
-            errorMessage.style.display = "block";
-
+            showMessage(
+                loginMessage,
+                "Sign in with an authorized clinic staff account " +
+                "to access patient records.",
+                "error"
+            );
         }
 
+        // =====================================
+        // INITIALIZE PASSWORD RECOVERY
+        // =====================================
+
+        if (hasRecoveryParameters()) {
+            initializeRecovery();
+        }
     </script>
 
 </body>
