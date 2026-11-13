@@ -452,7 +452,6 @@ function logout(){showToast('Log out is a demo action; authentication is not con
         // --- 5. CHARTS INITIALIZATION ---
         function initCharts() {
             const ctx1 = document.getElementById('servicesChart')?.getContext('2d');
-            const ctx2 = document.getElementById('statusChart')?.getContext('2d');
 
             if (ctx1) {
                 new Chart(ctx1, {
@@ -464,20 +463,6 @@ function logout(){showToast('Log out is a demo action; authentication is not con
                             data: [42, 28, 35, 50, 19],
                             backgroundColor: '#3b82f6',
                             borderRadius: 12
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-
-            if (ctx2) {
-                new Chart(ctx2, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Completed', 'Rescheduled', 'Cancelled'],
-                        datasets: [{
-                            data: [75, 15, 10],
-                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
                         }]
                     },
                     options: { responsive: true, maintainAspectRatio: false }

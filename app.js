@@ -8,6 +8,7 @@ let appData = {
     activities: [],
     patientsError: '',
     appointmentsError: '',
+    doctorsError: '',
     patientsLoading: false,
     appointmentsLoading: false
 };
@@ -73,8 +74,10 @@ async function fetchStaffRecords() {
     
     if (error) {
         console.error('Error fetching staff:', error);
+        appData.doctorsError = error.message || 'Could not load doctors.';
         return [];
     }
+    appData.doctorsError = '';
     return (data || [])
         .filter(s => {
             const role = String(s.role || '').trim().toLowerCase();
@@ -558,6 +561,7 @@ async function handleSavePatient(event) {
         document.getElementById('patient-id').value = '';
         closeModal('modal-add-patient');
         renderPatientsTable();
+        renderDashboardMetrics();
         showToast(patientId ? 'Patient record updated.' : `Added new patient: ${patient.full_name}`);
     } catch (error) {
         console.error('Could not save patient record:', error);
@@ -582,6 +586,7 @@ async function deletePatient(index) {
         await deletePatientRecord(patient.id);
         appData.patients.splice(index, 1);
         renderPatientsTable();
+        renderDashboardMetrics();
         showToast(`Deleted patient record for ${patient.full_name}.`);
     } catch (error) {
         console.error('Could not delete patient record:', error);
@@ -600,14 +605,188 @@ function renderDashboardMetrics() {
     }
     if (totalPatients) totalPatients.textContent = appData.patients.length.toLocaleString();
     if (pendingAppointments) {
-        const closedStatuses = ['Completed', 'Cancelled'];
-        const count = appData.appointments.filter(appointment =>
-            !closedStatuses.includes(normalizeAppointmentStatus(appointment.status))
-        ).length;
+        const count = getPendingAppointmentCount();
         pendingAppointments.textContent = appData.appointmentsError ? '—' : count.toLocaleString();
     }
-    if (activeDoctors) activeDoctors.textContent = appData.doctors.length.toLocaleString();
+    if (activeDoctors) activeDoctors.textContent = appData.doctorsError ? '—' : appData.doctors.length.toLocaleString();
     renderWeeklyTrafficChart();
+    renderReportMetrics();
+}
+
+function getPendingAppointmentCount() {
+    const closedStatuses = ['Completed', 'Cancelled'];
+    return appData.appointments.filter(appointment =>
+        !closedStatuses.includes(normalizeAppointmentStatus(appointment.status))
+    ).length;
+}
+
+function renderReportMetrics() {
+    const totalAppointments = document.getElementById('report-total-appointments');
+    const completedAppointments = document.getElementById('report-completed-appointments');
+    const totalPatients = document.getElementById('report-total-patients');
+    const pendingAppointments = document.getElementById('report-pending-appointments');
+    const activeDoctors = document.getElementById('report-active-doctors');
+    const completedCount = appData.appointments.filter(appointment =>
+        normalizeAppointmentStatus(appointment.status) === 'Completed'
+    ).length;
+    const pendingCount = getPendingAppointmentCount();
+
+    if (totalAppointments) totalAppointments.textContent = appData.appointmentsError ? '—' : appData.appointmentsTotal.toLocaleString();
+    if (completedAppointments) completedAppointments.textContent = appData.appointmentsError ? '—' : completedCount.toLocaleString();
+    if (totalPatients) totalPatients.textContent = appData.patientsError ? '—' : appData.patients.length.toLocaleString();
+    if (pendingAppointments) pendingAppointments.textContent = appData.appointmentsError ? '—' : pendingCount.toLocaleString();
+    if (activeDoctors) activeDoctors.textContent = appData.doctorsError ? '—' : appData.doctors.length.toLocaleString();
+    renderAppointmentsByServiceChart();
+    renderMonthlyPatientTrafficChart();
+}
+
+function renderAppointmentsByServiceChart() {
+    const canvas = document.getElementById('servicesChart');
+    const status = document.getElementById('services-chart-empty');
+    if (!canvas || !status) return;
+
+    const showStatus = message => {
+        const existingChart = typeof Chart === 'undefined' ? null : Chart.getChart(canvas);
+        if (existingChart) existingChart.destroy();
+        canvas.hidden = true;
+        status.textContent = message;
+        status.classList.remove('hidden');
+    };
+
+    if (appData.appointmentsError) {
+        showStatus('Appointment data could not be loaded.');
+        return;
+    }
+    if (typeof Chart === 'undefined') {
+        showStatus('Appointments by service is unavailable right now.');
+        console.error('Chart.js is not available; appointments by service could not be rendered.');
+        return;
+    }
+
+    const services = new Map();
+    appData.appointments.forEach(appointment => {
+        const service = String(appointment.service || '').trim() || 'Unspecified';
+        services.set(service, (services.get(service) || 0) + 1);
+    });
+    if (!services.size) {
+        showStatus('No saved appointments to report.');
+        return;
+    }
+
+    canvas.hidden = false;
+    status.classList.add('hidden');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) existingChart.destroy();
+    const sortedServices = [...services.entries()].sort((first, second) => second[1] - first[1]);
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: sortedServices.map(([service]) => service),
+            datasets: [{
+                label: 'Appointments',
+                data: sortedServices.map(([, count]) => count),
+                backgroundColor: '#3b82f6',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
+}
+
+function renderMonthlyPatientTrafficChart() {
+    const canvas = document.getElementById('patient-traffic-chart');
+    const status = document.getElementById('patient-traffic-chart-status');
+    if (!canvas || !status) return;
+
+    const showStatus = message => {
+        const existingChart = typeof Chart === 'undefined' ? null : Chart.getChart(canvas);
+        if (existingChart) existingChart.destroy();
+        canvas.hidden = true;
+        status.textContent = message;
+        status.classList.remove('hidden');
+    };
+
+    if (appData.appointmentsError) {
+        showStatus('Appointment data could not be loaded.');
+        return;
+    }
+    if (typeof Chart === 'undefined') {
+        showStatus('Monthly patient traffic is unavailable right now.');
+        console.error('Chart.js is not available; monthly patient traffic could not be rendered.');
+        return;
+    }
+
+    const now = new Date();
+    const months = Array.from({ length: 12 }, (_, index) => {
+        const date = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1);
+        return {
+            key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+            label: date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
+            patients: new Set()
+        };
+    });
+    const monthCounts = new Map(months.map(month => [month.key, month]));
+    let validVisitDates = 0;
+
+    appData.appointments.forEach(appointment => {
+        const appointmentDate = String(appointment.date || '');
+        const isoMonth = appointmentDate.match(/^(\d{4}-\d{2})/);
+        const parsedDate = isoMonth ? null : new Date(appointmentDate);
+        const monthKey = isoMonth
+            ? isoMonth[1]
+            : Number.isNaN(parsedDate?.getTime()) ? '' : `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}`;
+        if (monthKey && (!isoMonth || Number(monthKey.slice(-2)) >= 1 && Number(monthKey.slice(-2)) <= 12)) {
+            validVisitDates += 1;
+        }
+        const month = monthCounts.get(monthKey);
+        if (month) {
+            month.patients.add(String(appointment.patient_id || appointment.patient || appointment.id));
+        }
+    });
+
+    if (!validVisitDates) {
+        showStatus(appData.appointments.length ? 'Visit dates are unavailable for these appointment records.' : 'No patient traffic to report.');
+        return;
+    }
+
+    canvas.hidden = false;
+    status.textContent = '';
+    status.classList.add('hidden');
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) existingChart.destroy();
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: months.map(month => month.label),
+            datasets: [{
+                label: 'Patients',
+                data: months.map(month => month.patients.size),
+                backgroundColor: '#3b82f6',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+    });
 }
 
 function renderWeeklyTrafficChart() {

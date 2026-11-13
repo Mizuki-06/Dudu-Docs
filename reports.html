@@ -107,14 +107,14 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900">Analytics & Reports</h1>
-                    <p class="text-slate-500 text-sm">All-time appointment metrics calculated from saved appointment records.</p>
+                    <p class="text-slate-500 text-sm">Clinic metrics and monthly appointment activity calculated from saved records.</p>
                 </div>
                 <button onclick="exportDataExcel()" class="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-2xl text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm">
                     <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Full Report
                 </button>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <article class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
                     <p class="text-sm font-medium text-slate-500">Total appointments</p>
                     <p id="report-total-appointments" class="mt-2 text-2xl font-bold text-slate-900">0</p>
@@ -124,8 +124,16 @@
                     <p id="report-completed-appointments" class="mt-2 text-2xl font-bold text-slate-900">0</p>
                 </article>
                 <article class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-medium text-slate-500">Completion rate</p>
-                    <p id="report-completion-rate" class="mt-2 text-2xl font-bold text-slate-900">0%</p>
+                    <p class="text-sm font-medium text-slate-500">Total patients</p>
+                    <p id="report-total-patients" class="mt-2 text-2xl font-bold text-slate-900">0</p>
+                </article>
+                <article class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                    <p class="text-sm font-medium text-slate-500">Pending appointments</p>
+                    <p id="report-pending-appointments" class="mt-2 text-2xl font-bold text-slate-900">0</p>
+                </article>
+                <article class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                    <p class="text-sm font-medium text-slate-500">Active doctors</p>
+                    <p id="report-active-doctors" class="mt-2 text-2xl font-bold text-slate-900">0</p>
                 </article>
             </div>
 
@@ -139,14 +147,12 @@
                     </div>
                     <p id="services-chart-empty" class="hidden text-center text-sm text-slate-500">No saved appointments to report.</p>
                 </div>
-
-                <!-- Appointment Status Breakdown -->
                 <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
-                    <h3 class="font-bold text-slate-800 text-base">Appointments by Status</h3>
+                    <h3 class="font-bold text-slate-800 text-base">Monthly Patient Traffic</h3>
                     <div class="h-64 flex items-center justify-center">
-                        <canvas id="statusChart"></canvas>
+                        <canvas id="patient-traffic-chart"></canvas>
                     </div>
-                    <p id="status-chart-empty" class="hidden text-center text-sm text-slate-500">No saved appointments to report.</p>
+                    <p id="patient-traffic-chart-status" class="hidden text-center text-sm text-slate-500" role="status"></p>
                 </div>
             </div>
         </section>
@@ -156,6 +162,8 @@
         <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
         <span id="toast-message">Action saved successfully!</span>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
