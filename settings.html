@@ -112,7 +112,7 @@
                        id="settings-header-name">
                         Dr. Sarah Jenkins
                     </p>
-                    <p class="text-slate-500">Head Admin</p>
+                    <p class="text-slate-500" id="settings-header-role">Clinic Staff</p>
                 </div>
             </div>
         </div>
@@ -232,7 +232,8 @@
 
                         <label class="settings-label">
                             Role
-                            <input value="Head Admin"
+                            <input id="settings-role"
+                                   value="Clinic Staff"
                                    disabled
                                    class="settings-input">
                         </label>
@@ -392,11 +393,13 @@
     <script>
         const SETTINGS_STORAGE_KEY = "babydududocs_settings";
         const LEGACY_SETTINGS_KEY = "youcare_settings";
+        const CURRENT_USER_STORAGE_KEY = "babydududocs_current_user";
         const MAX_PHOTO_SIZE = 2 * 1024 * 1024;
 
         const settingsDefaults = {
             name: "Dr. Sarah Jenkins",
             email: "sarah.jenkins@babydududocs.com",
+            role: "Clinic Staff",
             phone: "+1 (415) 555-0128",
             twoFactor: true,
             appointmentUpdates: true,
@@ -410,6 +413,19 @@
 
         let pendingProfilePhoto = undefined;
         let originalSettings = null;
+        let currentSettingsUser = null;
+
+        function settingsReadCurrentUser() {
+            try {
+                currentSettingsUser = JSON.parse(
+                    localStorage.getItem(CURRENT_USER_STORAGE_KEY) || "null"
+                );
+            } catch (error) {
+                console.error("Could not read the signed-in profile:", error);
+                currentSettingsUser = null;
+            }
+            return currentSettingsUser;
+        }
 
         function settingsReadSaved() {
             try {
@@ -429,11 +445,16 @@
 
         function settingsGetCurrentForm() {
             const oldSettings = settingsReadSaved();
+            const profileSettings =
+                currentSettingsUser && oldSettings.profileUserId === currentSettingsUser.id
+                    ? oldSettings
+                    : {};
 
             return {
                 name: document.getElementById("settings-name").value.trim(),
                 email: document.getElementById("settings-email").value.trim(),
                 phone: document.getElementById("settings-phone").value.trim(),
+                profileUserId: currentSettingsUser?.id || "",
 
                 twoFactor: document.getElementById("settings-two-factor").checked,
 
@@ -453,7 +474,7 @@
                 profilePhoto:
                     pendingProfilePhoto !== undefined
                         ? pendingProfilePhoto
-                        : (oldSettings.profilePhoto || "")
+                        : (profileSettings.profilePhoto || "")
             };
         }
 
@@ -497,6 +518,13 @@
             document.getElementById("settings-header-name").textContent =
                 settings.name || settingsDefaults.name;
 
+            const role = document.getElementById("settings-header-role");
+            if (role) {
+                role.textContent = currentSettingsUser?.role === "clinic_staff"
+                    ? "Clinic Staff"
+                    : settingsDefaults.role;
+            }
+
             settingsRenderAvatar(
                 document.getElementById("settings-header-avatar"),
                 settings.name || settingsDefaults.name,
@@ -537,13 +565,25 @@
 
         function settingsLoad() {
             const saved = settingsReadSaved();
+            const user = settingsReadCurrentUser();
+            const profileSettings =
+                user && saved.profileUserId === user.id ? saved : {};
+            const metadata = user || {};
+            const role = document.getElementById("settings-role");
+
+            settingsDefaults.name = metadata.name || metadata.email || settingsDefaults.name;
+            settingsDefaults.email = metadata.email || settingsDefaults.email;
+            settingsDefaults.role = metadata.role === "clinic_staff"
+                ? "Clinic Staff"
+                : settingsDefaults.role;
+            if (role) role.value = settingsDefaults.role;
 
             const settings = {
                 ...settingsDefaults,
 
                 // Support settings saved by the earlier page version.
-                name: saved.name ?? saved.fullName ?? settingsDefaults.name,
-                email: saved.email ?? settingsDefaults.email,
+                name: profileSettings.name ?? settingsDefaults.name,
+                email: profileSettings.email ?? settingsDefaults.email,
                 phone: saved.phone ?? settingsDefaults.phone,
                 twoFactor: saved.twoFactor ?? settingsDefaults.twoFactor,
                 appointmentUpdates:
@@ -555,7 +595,10 @@
                 language: saved.language ?? settingsDefaults.language,
                 dateFormat: saved.dateFormat ?? settingsDefaults.dateFormat,
                 timezone: saved.timezone ?? settingsDefaults.timezone,
-                profilePhoto: saved.profilePhoto ?? settingsDefaults.profilePhoto
+                profilePhoto:
+                    profileSettings.profilePhoto ??
+                    metadata.avatarUrl ??
+                    settingsDefaults.profilePhoto
             };
 
             pendingProfilePhoto = undefined;
@@ -670,6 +713,7 @@
         async function settingsLogout() {
             if (confirm("Are you sure you want to log out?")) {
                 await db.auth.signOut();
+                localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
                 sessionStorage.clear();
 
                 window.location.href = "login.html";

@@ -738,6 +738,26 @@
                     );
                 }
 
+                const userMetadata = data.user.user_metadata || {};
+                const displayName = [
+                    userMetadata.full_name,
+                    userMetadata.name,
+                    userMetadata.display_name
+                ].find(value => typeof value === "string" && value.trim())?.trim()
+                    || email;
+                const avatarUrl = userMetadata.avatar_url || userMetadata.picture;
+                const profile = {
+                    id: data.user.id,
+                    name: displayName,
+                    email: data.user.email || email,
+                    role: data.user.app_metadata.role,
+                    avatarUrl: typeof avatarUrl === "string" ? avatarUrl : ""
+                };
+                localStorage.setItem(
+                    "babydududocs_current_user",
+                    JSON.stringify(profile)
+                );
+
                 // Remember email only, never password.
                 if (rememberMe) {
                     localStorage.setItem("rememberedEmail", email);

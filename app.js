@@ -14,6 +14,69 @@ let appData = {
 };
 let currentUserRole = '';
 
+function getCurrentUserProfile() {
+    try {
+        const user = JSON.parse(
+            localStorage.getItem('babydududocs_current_user') || 'null'
+        );
+        if (!user || typeof user !== 'object') return null;
+
+        const savedSettings = JSON.parse(
+            localStorage.getItem('babydududocs_settings') || 'null'
+        );
+        const matchingSettings =
+            savedSettings && savedSettings.profileUserId === user.id
+                ? savedSettings
+                : null;
+
+        return {
+            name: matchingSettings?.name || user.name || user.email || 'Clinic Staff',
+            role: user.role === 'clinic_staff'
+                ? 'Clinic Staff'
+                : String(user.role || 'Clinic Staff')
+                    .replace(/[_-]+/g, ' ')
+                    .replace(/\b\w/g, character => character.toUpperCase()),
+            avatarUrl: matchingSettings?.profilePhoto || user.avatarUrl || ''
+        };
+    } catch (error) {
+        console.error('Could not load the signed-in profile:', error);
+        return null;
+    }
+}
+
+function renderCurrentUserProfile() {
+    const profile = getCurrentUserProfile();
+    if (!profile) return;
+
+    document.querySelectorAll('#current-user-name, #settings-header-name')
+        .forEach(element => {
+            element.textContent = profile.name;
+        });
+    document.querySelectorAll('#current-user-role, #settings-header-role')
+        .forEach(element => {
+            element.textContent = profile.role;
+        });
+
+    document.querySelectorAll('#current-user-avatar, #settings-header-avatar')
+        .forEach(element => {
+            element.replaceChildren();
+            if (profile.avatarUrl) {
+                const image = document.createElement('img');
+                image.src = profile.avatarUrl;
+                image.alt = 'Profile photo';
+                image.className = 'w-full h-full object-cover';
+                element.appendChild(image);
+            } else {
+                element.textContent = profile.name
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map(part => part.charAt(0).toUpperCase())
+                    .join('');
+            }
+        });
+}
+
 function canManagePatients() {
     return currentUserRole === 'admin' || currentUserRole === 'clinic_staff';
 }
@@ -1587,6 +1650,7 @@ function initAppointmentControls() {
 // --- 9. APP INITIALIZATION LISTENER ---
 window.addEventListener('load', function() {
     initializePageNavigation();
+    renderCurrentUserProfile();
     if (document.body.dataset.page === 'patients') {
         initializePatientPermissions()
             .catch(error => {
