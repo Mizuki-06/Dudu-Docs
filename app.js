@@ -1,6 +1,7 @@
 // --- 1. GLOBAL STATE INITIALIZATION ---
 let appData = {
     doctors: [],
+    staffAvailability: [],
     patients: [],
     appointments: [],
     appointmentsTotal: 0,
@@ -9,6 +10,7 @@ let appData = {
     patientsError: '',
     appointmentsError: '',
     doctorsError: '',
+    staffAvailabilityError: '',
     patientsLoading: false,
     appointmentsLoading: false
 };
@@ -157,6 +159,24 @@ async function fetchStaffRecords() {
         }));
 }
 
+async function fetchStaffAvailability() {
+    const { data, error } = await db
+        .from('staff_availability')
+        .select('availability_id, staff_id, day_of_week, start_time, end_time, schedule_type')
+        .order('staff_id', { ascending: true })
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching staff availability:', error);
+        appData.staffAvailabilityError = error.message || 'Could not load staff availability.';
+        return [];
+    }
+
+    appData.staffAvailabilityError = '';
+    return data || [];
+}
+
 async function fetchPatients() {
     const { data, error } = await db
         .from('patients')
@@ -296,14 +316,16 @@ async function loadAllDatabaseRecords() {
     appData.appointmentsError = '';
 
     try {
-        const [doctorsRes, patientsRes, inquiriesRes, activitiesRes] = await Promise.all([
+        const [doctorsRes, availabilityRes, patientsRes, inquiriesRes, activitiesRes] = await Promise.all([
             fetchStaffRecords(),
+            document.body.dataset.page === 'staff' ? fetchStaffAvailability() : Promise.resolve([]),
             fetchPatients(),
             fetchInquiries(),
             fetchActivities()
         ]);
 
         appData.doctors = doctorsRes;
+        appData.staffAvailability = availabilityRes;
         appData.patients = patientsRes;
         appData.inquiries = inquiriesRes;
         appData.activities = activitiesRes;
@@ -323,6 +345,7 @@ async function loadAllDatabaseRecords() {
         appData.patientsLoading = false;
         
         renderDoctorSidebar();
+        renderStaffDirectory();
         renderPatientsTable();
         renderDashboardMetrics();
         renderInquiriesAndFeedback();
@@ -390,6 +413,67 @@ function renderDoctorSidebar() {
             </div>
         </article>
     `).join('');
+    if (window.lucide) lucide.createIcons();
+}
+
+function renderStaffDirectory() {
+    const container = document.getElementById('staff-grid-container');
+    if (!container) return;
+
+    const availabilityError = appData.staffAvailabilityError
+        ? `<p class="col-span-full rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700" role="alert">Could not load staff availability: ${escapeHtml(appData.staffAvailabilityError)}</p>`
+        : '';
+
+    if (appData.doctorsError) {
+        container.innerHTML = `${availabilityError}<p class="col-span-full rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700" role="alert">Could not load staff: ${escapeHtml(appData.doctorsError)}</p>`;
+        return;
+    }
+
+    if (!appData.doctors.length) {
+        container.innerHTML = `${availabilityError}<p class="col-span-full rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500">No staff records found.</p>`;
+        return;
+    }
+
+    const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    container.innerHTML = `${availabilityError}${appData.doctors.map(staff => {
+        const staffAvailability = appData.staffAvailability
+            .filter(row => String(row.staff_id) === String(staff.staff_id))
+            .sort((a, b) =>
+                weekdays.indexOf(a.day_of_week) - weekdays.indexOf(b.day_of_week) ||
+                String(a.start_time).localeCompare(String(b.start_time))
+            );
+        const availabilityContent = appData.staffAvailabilityError
+            ? '<p class="text-sm text-rose-600">Schedule unavailable.</p>'
+            : staffAvailability.length
+                ? `<ul class="mt-2 space-y-1">${staffAvailability.map(row => `
+                    <li class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600">
+                        <span class="flex items-center gap-2">
+                            <span>${escapeHtml(row.day_of_week)}</span>
+                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">${escapeHtml(row.schedule_type || 'regular')}</span>
+                        </span>
+                        <span>${escapeHtml(formatTimeString(row.start_time))} - ${escapeHtml(formatTimeString(row.end_time))}</span>
+                    </li>
+                `).join('')}</ul>`
+                : '<p class="mt-2 text-sm text-slate-500">No availability scheduled.</p>';
+
+        return `
+            <article class="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm">
+                <div class="flex items-start gap-4">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
+                        <i data-lucide="user-round" class="h-6 w-6" aria-hidden="true"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="truncate font-bold text-slate-900">${escapeHtml(staff.name || 'Unnamed staff member')}</h2>
+                        <p class="mt-1 text-sm text-slate-500">${escapeHtml(staff.specialty || 'General Practitioner')}</p>
+                    </div>
+                </div>
+                <div class="mt-5 border-t border-slate-100 pt-4">
+                    <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500">Availability</h3>
+                    ${availabilityContent}
+                </div>
+            </article>
+        `;
+    }).join('')}`;
     if (window.lucide) lucide.createIcons();
 }
 
