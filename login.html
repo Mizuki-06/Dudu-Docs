@@ -709,75 +709,106 @@
         // LOGIN FUNCTION
         // =====================================
 
-        loginForm.addEventListener("submit", async function (event) {
-            event.preventDefault();
+      
+loginForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
 
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            const rememberMe = rememberCheckbox.checked;
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const rememberMe = rememberCheckbox.checked;
 
-            loginButton.disabled = true;
-            loginButton.textContent = "Signing in...";
+    loginButton.disabled = true;
+    loginButton.textContent = "Signing in...";
 
-            clearMessage(loginMessage);
+    clearMessage(loginMessage);
 
-            try {
-                const { data, error } = await db.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-                if (error) throw error;
-
-                // Check authorized clinic staff.
-                if (data.user.app_metadata?.role !== "clinic_staff") {
-                    await db.auth.signOut();
-
-                    throw new Error(
-                        "This account is not authorized for the clinic portal."
-                    );
-                }
-
-                const userMetadata = data.user.user_metadata || {};
-                const displayName = [
-                    userMetadata.full_name,
-                    userMetadata.name,
-                    userMetadata.display_name
-                ].find(value => typeof value === "string" && value.trim())?.trim()
-                    || email;
-                const avatarUrl = userMetadata.avatar_url || userMetadata.picture;
-                const profile = {
-                    id: data.user.id,
-                    name: displayName,
-                    email: data.user.email || email,
-                    role: data.user.app_metadata.role,
-                    avatarUrl: typeof avatarUrl === "string" ? avatarUrl : ""
-                };
-                localStorage.setItem(
-                    "babydududocs_current_user",
-                    JSON.stringify(profile)
-                );
-
-                // Remember email only, never password.
-                if (rememberMe) {
-                    localStorage.setItem("rememberedEmail", email);
-                } else {
-                    localStorage.removeItem("rememberedEmail");
-                }
-
-                window.location.href = "index.html";
-
-            } catch (error) {
-                showMessage(
-                    loginMessage,
-                    error.message || "Sign in failed. Please try again.",
-                    "error"
-                );
-            } finally {
-                loginButton.disabled = false;
-                loginButton.textContent = "Sign In";
-            }
+    try {
+        // Step 1: Authenticate using Supabase
+        const { data, error } = await db.auth.signInWithPassword({
+            email: email,
+            password: password
         });
+
+        if (error) throw error;
+
+        // Step 2: Retrieve the user's staff record
+        const { data: staff, error: staffError } = await db
+            .from("staff")
+            .select("staff_id, full_name, role, status")
+            .eq("auth_user_id", data.user.id)
+            .maybeSingle();
+
+        if (staffError) {
+            console.error("Staff lookup error:", staffError);
+            throw new Error("Could not verify your clinic account.");
+        }
+
+        if (!staff) {
+            throw new Error(
+                "This account is not registered in the clinic staff records."
+            );
+        }
+
+        // Step 3: Check account status
+        if (staff.status !== "active") {
+            throw new Error(
+                "Your clinic account is inactive. Contact the administrator."
+            );
+        }
+
+        // Step 4: Validate role
+        const allowedRoles = ["admin", "clinic_staff", "doctor"];
+
+        if (!allowedRoles.includes(staff.role)) {
+            throw new Error(
+                "This account is not authorized for the clinic portal."
+            );
+        }
+
+        // Step 5: Prepare user information
+        const displayName = staff.full_name || email;
+
+        const userMetadata = data.user.user_metadata || {};
+        const avatarUrl = userMetadata.avatar_url || userMetadata.picture;
+
+        const profile = {
+            id: data.user.id,
+            staffId: staff.staff_id,
+            name: displayName,
+            email: data.user.email || email,
+            role: staff.role,
+            avatarUrl: typeof avatarUrl === "string" ? avatarUrl : ""
+        };
+
+        localStorage.setItem(
+            "babydududocs_current_user",
+            JSON.stringify(profile)
+        );
+
+        // Step 6: Remember email only, never password
+        if (rememberMe) {
+            localStorage.setItem("rememberedEmail", email);
+        } else {
+            localStorage.removeItem("rememberedEmail");
+        }
+
+        // Step 7: Redirect to the shared dashboard
+        window.location.href = "index.html";
+
+    } catch (error) {
+        // Sign out if authorization or login fails
+        await db.auth.signOut();
+
+        showMessage(
+            loginMessage,
+            error.message || "Sign in failed. Please try again.",
+            "error"
+        );
+    } finally {
+        loginButton.disabled = false;
+        loginButton.textContent = "Sign In";
+    }
+});
 
         // =====================================
         // OPEN FORGOT PASSWORD FORM
