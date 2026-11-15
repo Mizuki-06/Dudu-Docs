@@ -52,8 +52,17 @@ function getPatientFields(value: unknown) {
     return patient;
 }
 
-async function recordActivity(supabase: ReturnType<typeof createClient>, action: string, description: string) {
-    const { error } = await supabase.from("activity_logs").insert({ action, description });
+async function recordActivity(
+    supabase: ReturnType<typeof createClient>,
+    userId: string,
+    action: string,
+    description: string
+) {
+    const { error } = await supabase.from("activity_logs").insert({
+        auth_user_id: userId,
+        action,
+        description
+    });
     if (!error) return null;
 
     console.error("Patient change was saved, but activity logging failed:", error.message);
@@ -81,12 +90,23 @@ Deno.serve(async (request: Request) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(tokenMatch[1]);
     if (authError || !user) return respond({ error: "Your session is invalid. Please sign in again." }, 401);
-    const role = user.app_metadata?.role;
-    console.log("PATIENT FUNCTION AUTH CHECK:", {
-    userId: user.id,
-    email: user.email,
-    role: role
-});
+
+    const { data: staff, error: staffError } = await supabase
+        .from("staff")
+        .select("staff_id, role, status")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+    if (staffError) {
+        console.error("Could not verify patient-service staff role:", staffError.message);
+        return respond({ error: "Could not verify your clinic account." }, 500);
+    }
+
+    const role = String(staff?.role || "").trim().toLowerCase();
+    const status = String(staff?.status || "").trim().toLowerCase();
+    if (!staff || status !== "active") {
+        return respond({ error: "This clinic account is inactive or unregistered." }, 403);
+    }
+
     const canViewPatients = ["admin", "clinic_staff", "doctor"].includes(role);
     const canManagePatients = role === "admin" || role === "clinic_staff";
     if (!canViewPatients) {
@@ -106,7 +126,25 @@ Deno.serve(async (request: Request) => {
 
     const action = payload.action;
     if (action === "list") {
-        const { data, error } = await supabase.from("patients").select("*");
+        let query = supabase.from("patients").select("*");
+
+        if (role === "doctor") {
+            const { data: appointments, error: appointmentsError } = await supabase
+                .from("appointments")
+                .select("patient_id")
+                .eq("staff_id", staff.staff_id);
+
+            if (appointmentsError) {
+                console.error("Could not load doctor's assigned appointments:", appointmentsError.message);
+                return respond({ error: "Could not verify your assigned patients." }, 500);
+            }
+
+            const patientIds = [...new Set((appointments || []).map(({ patient_id }) => patient_id))];
+            if (patientIds.length === 0) return respond({ patients: [] });
+            query = query.in("id", patientIds);
+        }
+
+        const { data, error } = await query;
         if (error) {
             console.error("Patient list failed:", error.message);
             return respond({ error: "Could not load patient records." }, 500);
@@ -134,6 +172,7 @@ Deno.serve(async (request: Request) => {
             }
             const activityLogError = await recordActivity(
                 supabase,
+                user.id,
                 `Added patient record for ${data.full_name}`,
                 "Created a patient record."
             );
@@ -155,6 +194,7 @@ Deno.serve(async (request: Request) => {
         }
         const activityLogError = await recordActivity(
             supabase,
+            user.id,
             `Updated patient record for ${data.full_name}`,
             "Changed patient record details."
         );
@@ -182,6 +222,7 @@ Deno.serve(async (request: Request) => {
         if (!data) return respond({ error: "Patient record not found." }, 404);
         const activityLogError = await recordActivity(
             supabase,
+            user.id,
             `Deleted patient record for ${data?.full_name || `patient ${payload.id}`}`,
             "Deleted a patient record."
         );

@@ -13,6 +13,19 @@ let appData = {
     appointmentsLoading: false
 };
 let currentUserRole = '';
+let currentAuthUser = null;
+let currentStaff = null;
+
+const NAVIGATION_ROLE_PERMISSIONS = Object.freeze({
+    dashboard: ['admin', 'clinic_staff', 'doctor'],
+    patients: ['admin', 'clinic_staff', 'doctor'],
+    appointments: ['admin', 'clinic_staff', 'doctor'],
+    inquiries: ['admin', 'clinic_staff'],
+    staff: ['admin', 'clinic_staff'],
+    reports: ['admin'],
+    'system-settings': ['admin'],
+    'my-profile': ['admin', 'clinic_staff', 'doctor']
+});
 
 function getCurrentUserProfile() {
     try {
@@ -28,14 +41,17 @@ function getCurrentUserProfile() {
             savedSettings && savedSettings.profileUserId === user.id
                 ? savedSettings
                 : null;
+        const roleKey = String(user.role || '').trim().toLowerCase();
+        const roleLabels = {
+            admin: 'Admin',
+            clinic_staff: 'Clinic Staff',
+            doctor: 'Doctor'
+        };
 
         return {
-            name: matchingSettings?.name || user.name || user.email || 'Clinic Staff',
-            role: user.role === 'clinic_staff'
-                ? 'Clinic Staff'
-                : String(user.role || 'Clinic Staff')
-                    .replace(/[_-]+/g, ' ')
-                    .replace(/\b\w/g, character => character.toUpperCase()),
+            name: matchingSettings?.name || user.fullName || user.name || user.email || 'Clinic Staff',
+            roleKey,
+            role: roleLabels[roleKey] || 'Clinic Staff',
             avatarUrl: matchingSettings?.profilePhoto || user.avatarUrl || ''
         };
     } catch (error) {
@@ -48,7 +64,9 @@ function renderCurrentUserProfile() {
     const profile = getCurrentUserProfile();
     if (!profile) return;
 
-    document.querySelectorAll('#current-user-name, #settings-header-name')
+    document.querySelectorAll(
+        '#current-user-name, #settings-header-name, #dashboard-welcome-name'
+    )
         .forEach(element => {
             element.textContent = profile.name;
         });
@@ -81,16 +99,83 @@ function canManagePatients() {
     return currentUserRole === 'admin' || currentUserRole === 'clinic_staff';
 }
 
-async function initializePatientPermissions() {
-    const { data: { user }, error } = await db.auth.getUser();
-    if (error) throw error;
+async function initializeAuthenticatedUser() {
+    currentAuthUser = null;
+    currentStaff = null;
+    currentUserRole = '';
 
-    currentUserRole = user?.app_metadata?.role || '';
+    const { data, error } = await db.auth.getUser();
+    if (error) throw new Error(`Could not verify your session: ${error.message}`);
+    const user = data?.user;
+    if (!user) throw new Error('You are not signed in. Please sign in again.');
+
+    const { data: staff, error: staffError } = await db
+        .from('staff')
+        .select('staff_id, full_name, role, status')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+    if (staffError) {
+        console.error('Staff lookup error:', staffError);
+        throw new Error('Could not verify your clinic staff record.');
+    }
+    if (!staff) throw new Error('No clinic staff record is linked to this account.');
+
+    const role = String(staff.role || '').trim().toLowerCase();
+    const status = String(staff.status || '').trim().toLowerCase();
+    if (status !== 'active') {
+        throw new Error('Your clinic account is inactive. Contact the administrator.');
+    }
+    if (!['admin', 'clinic_staff', 'doctor'].includes(role)) {
+        throw new Error('Your clinic account has an unsupported role.');
+    }
+
+    currentAuthUser = user;
+    currentStaff = staff;
+    currentUserRole = role;
+    applyNavigationPermissions(role);
+}
+
+function initializeRoleBasedControls() {
     const addPatientButton = document.getElementById('add-patient-button');
     if (addPatientButton) {
         addPatientButton.hidden = !canManagePatients();
         addPatientButton.classList.toggle('hidden', !canManagePatients());
     }
+
+    const addAppointmentButton =
+        document.getElementById('add-appointment-button');
+    if (addAppointmentButton) {
+        const canManage = canManageAppointments();
+        addAppointmentButton.hidden = !canManage;
+        addAppointmentButton.classList.toggle('hidden', !canManage);
+    }
+}
+
+function canManageAppointments() {
+    return canManagePatients();
+}
+
+function applyNavigationPermissions(role = '') {
+    const normalizedRole = String(role).trim().toLowerCase();
+    document.querySelectorAll('[data-nav-item]').forEach(item => {
+        const allowedRoles =
+            NAVIGATION_ROLE_PERMISSIONS[item.dataset.navItem] || [];
+        const visible = allowedRoles.includes(normalizedRole);
+        item.hidden = !visible;
+        item.classList.toggle('hidden', !visible);
+        item.setAttribute('aria-hidden', String(!visible));
+    });
+}
+
+function enforcePageAccess() {
+    const page = document.body.dataset.page;
+    const permissionKey = page === 'settings' ? 'system-settings' : page;
+    const allowedRoles = NAVIGATION_ROLE_PERMISSIONS[permissionKey] || [];
+
+    if (allowedRoles.includes(currentUserRole)) return true;
+
+    window.location.replace('index.html');
+    return false;
 }
 
 // --- 2. TIME CONVERSION HELPERS ---
@@ -172,9 +257,19 @@ async function fetchPatients() {
     return data || [];
 }
 
+function scopeAppointmentsToCurrentUser(query) {
+    if (!currentAuthUser?.id || !currentStaff?.staff_id) {
+        throw new Error('Authentication must be initialized before loading appointments.');
+    }
+
+    if (currentUserRole === 'doctor') {
+        return query.eq('staff_id', currentStaff.staff_id);
+    }
+    return query;
+}
+
 async function fetchAppointments() {
-    // 1. Try foreign key relational join query
-    const { data, error, count } = await db
+    let query = db
         .from('appointments')
         .select(`
             id,
@@ -190,15 +285,20 @@ async function fetchAppointments() {
             staff ( staff_id, full_name, specialization )
         `, { count: 'exact' })
         .order('appointment_date', { ascending: true });
+    query = scopeAppointmentsToCurrentUser(query);
+
+    const { data, error, count } = await query;
 
     if (error) {
         console.warn('Relational fetch failed, attempting fallback query:', error.message);
         
-        // 2. Fallback query if FK relationship caching is pending in Supabase
-        const { data: simpleData, error: simpleError, count: simpleCount } = await db
+        let fallbackQuery = db
             .from('appointments')
             .select('*', { count: 'exact' })
             .order('appointment_date', { ascending: true });
+        fallbackQuery = scopeAppointmentsToCurrentUser(fallbackQuery);
+        const { data: simpleData, error: simpleError, count: simpleCount } =
+            await fallbackQuery;
 
         if (simpleError) {
             console.error('Error fetching appointments:', simpleError);
@@ -270,20 +370,41 @@ async function fetchActivities() {
         return [];
     }
     return (data || []).map(act => ({
-        user: act.user || 'Clinic Staff',
+        user: act.user || currentStaff?.full_name || 'Clinic Staff',
         action: act.action || act.description || 'Performed action',
         time: act.created_at ? new Date(act.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''
     }));
 }
 
 async function recordActivity(action, description) {
-    const { error } = await db.from('activity_logs').insert([{ action, description }]);
+    if (!currentAuthUser?.id) {
+        return new Error('Activity cannot be recorded before authentication.');
+    }
+
+    const { data: { user }, error: authError } = await db.auth.getUser();
+    if (authError) {
+        console.error('Could not verify the activity actor:', authError);
+        return authError;
+    }
+    if (!user || user.id !== currentAuthUser.id) {
+        return new Error('The authenticated user changed. Please sign in again.');
+    }
+
+    const { error } = await db.from('activity_logs').insert([{
+        auth_user_id: user.id,
+        action,
+        description
+    }]);
     if (error) {
         console.error('Could not record activity:', error);
         return error;
     }
 
-    appData.activities.unshift({ user: 'Clinic Staff', action, time: 'Just now' });
+    appData.activities.unshift({
+        user: currentStaff?.full_name || user.email || 'Clinic Staff',
+        action,
+        time: 'Just now'
+    });
     appData.activities = appData.activities.slice(0, 10);
     renderActivityStream();
     return null;
@@ -329,6 +450,7 @@ async function loadAllDatabaseRecords() {
         renderActivityStream();
         renderMiniCalendar();
         populateSelects();
+        initAppointmentControls();
     }
 }
 
@@ -343,11 +465,23 @@ function switchTab(tabId) {
         staff: 'staff.html',
         settings: 'settings.html'
     };
-    if (pages[tabId]) window.location.href = pages[tabId];
+    const page = pages[tabId];
+    if (!page) return;
+
+    const permissionKey = tabId === 'settings' ? 'system-settings' : tabId;
+    const allowedRoles = NAVIGATION_ROLE_PERMISSIONS[permissionKey] || [];
+    const role = String(currentUserRole || '').trim().toLowerCase();
+    if (!allowedRoles.includes(role)) {
+        showToast('You do not have permission to access this page.');
+        return;
+    }
+
+    window.location.href = page;
 }
 
 function initializePageNavigation() {
     const page = document.body.dataset.page;
+    applyNavigationPermissions();
     document.querySelectorAll('[data-page-link]').forEach(link => {
         if (!link.id && !link.closest('.mobile-navigation')) return;
         const active = link.dataset.pageLink === page;
@@ -1062,6 +1196,11 @@ function populateServiceTypes(selectedService = '') {
 }
 
 function openEditScheduleModal(id) {
+    if (!canManageAppointments()) {
+        showToast('You do not have permission to change appointments.');
+        return;
+    }
+
     const appointment = appData.appointments.find(item => String(item.id) === String(id));
     const form = document.querySelector('#modal-book-appointment form');
     if (!appointment || !form) return;
@@ -1082,6 +1221,11 @@ function openEditScheduleModal(id) {
 }
 
 function openNewAppointmentModal() {
+    if (!canManageAppointments()) {
+        showToast('You do not have permission to create appointments.');
+        return;
+    }
+
     populateSelects();
     const form = document.querySelector('#modal-book-appointment form');
     form?.reset();
@@ -1105,6 +1249,11 @@ function closeModal(id) {
 
 async function handleBookAppointment(e) {
     e.preventDefault();
+    if (!canManageAppointments()) {
+        showToast('You do not have permission to change appointments.');
+        return;
+    }
+
     const submitButton = document.getElementById('book-appointment-submit');
     const appointmentId = document.getElementById('book-appointment-id').value;
     const patientId = document.getElementById('book-patient-select').value;
@@ -1209,6 +1358,11 @@ async function handleBookAppointment(e) {
 }
 
 async function deleteAppointment(id) {
+    if (!canManageAppointments()) {
+        showToast('You do not have permission to delete appointments.');
+        return;
+    }
+
     const appointment = appData.appointments.find(item => String(item.id) === String(id));
     if (!appointment) return;
 
@@ -1241,6 +1395,11 @@ async function deleteAppointment(id) {
 }
 
 async function completeAppointment(id) {
+    if (!canManageAppointments()) {
+        showToast('You do not have permission to update appointment status.');
+        return;
+    }
+
     const appointment = appData.appointments.find(item => String(item.id) === String(id));
     if (!appointment) return;
 
@@ -1305,6 +1464,29 @@ async function resolveInquiry(id) {
     }
 }
 
+async function settingsLogout() {
+    if (!confirm('Are you sure you want to log out?')) return;
+
+    try {
+        const { error } = await db.auth.signOut();
+        if (error) throw error;
+
+        localStorage.removeItem('babydududocs_current_user');
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+    } catch (error) {
+        console.error('Could not log out:', error);
+        const message = error.message
+            ? `Could not log out: ${error.message}`
+            : 'Could not log out. Please try again.';
+        if (typeof settingsShowToast === 'function') {
+            settingsShowToast(message);
+        } else {
+            showToast(message);
+        }
+    }
+}
+
 function showToast(msg) {
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toast-message');
@@ -1351,6 +1533,8 @@ function getFilteredAppointments() {
 }
 
 function createAppointmentActions(appointment) {
+    if (!canManageAppointments()) return null;
+
     const actions = document.createElement('div');
     actions.className = 'mt-2 flex flex-wrap justify-end gap-1';
     const edit = document.createElement('button');
@@ -1414,7 +1598,8 @@ function renderBookedAppointments() {
             notes.textContent = appointment.notes;
             card.append(notes);
         }
-        card.append(createAppointmentActions(appointment));
+        const actions = createAppointmentActions(appointment);
+        if (actions) card.append(actions);
         list.append(card);
     });
 }
@@ -1553,7 +1738,9 @@ function renderScheduleGrid() {
                 const patient = document.createElement('p');
                 patient.className = 'truncate text-[10px]';
                 patient.textContent = appointment.patient;
-                card.append(service, patient, createAppointmentActions(appointment));
+                card.append(service, patient);
+                const actions = createAppointmentActions(appointment);
+                if (actions) card.append(actions);
                 cell.append(card);
             });
             return cell;
@@ -1651,16 +1838,31 @@ function initAppointmentControls() {
 window.addEventListener('load', function() {
     initializePageNavigation();
     renderCurrentUserProfile();
-    if (document.body.dataset.page === 'patients') {
-        initializePatientPermissions()
-            .catch(error => {
-                console.error('Could not determine patient permissions:', error);
-                appData.patientsError = 'Could not verify your account permissions. Please sign in again.';
-            })
-            .finally(loadAllDatabaseRecords);
-    } else {
-        loadAllDatabaseRecords();
-    }
+
+    (async function initializeApplicationData() {
+        try {
+            await initializeAuthenticatedUser();
+            if (!enforcePageAccess()) return;
+            initializeRoleBasedControls();
+            await loadAllDatabaseRecords();
+        } catch (error) {
+            console.error('Could not initialize the authenticated user:', error);
+            if (
+                error.name === 'AuthSessionMissingError' ||
+                error.message === 'Auth session missing'
+            ) {
+                window.location.replace('login.html');
+                return;
+            }
+            const message = error.message || 'Could not verify your clinic account.';
+            appData.patientsError = message;
+            appData.appointmentsError = message;
+            renderPatientsTable();
+            renderDashboardMetrics();
+            renderMiniCalendar();
+            showToast(message);
+        }
+    })();
     
     try { initAppointmentControls(); } catch (error) { console.error('Appointment controls failed:', error); }
     try { loadSettings(); } catch (error) { console.error('Settings load failed:', error); }

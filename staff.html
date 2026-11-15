@@ -62,43 +62,48 @@
 
         <!-- Central Navigation Pills -->
         <nav class="hidden md:flex items-center bg-slate-100/80 p-1.5 rounded-full border border-slate-200/60 gap-1">
-            <button onclick="switchTab('dashboard')" data-page-link="dashboard" id="nav-dashboard" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Dashboard</button>
-            <button onclick="switchTab('patients')" data-page-link="patients" id="nav-patients" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Patient</button>
-            <button onclick="switchTab('appointments')" data-page-link="appointments" id="nav-appointments" class="tab-pill px-5 py-2 rounded-full text-sm font-medium bg-brand-600 text-white shadow-sm">Appointment</button>
-            <button onclick="switchTab('reports')" data-page-link="reports" id="nav-reports" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Report</button>
-            <button onclick="switchTab('inquiries')" data-page-link="inquiries" id="nav-inquiries" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
+            <button onclick="switchTab('dashboard')" data-page-link="dashboard" data-nav-item="dashboard" id="nav-dashboard" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Dashboard</button>
+            <button onclick="switchTab('patients')" data-page-link="patients" data-nav-item="patients" id="nav-patients" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Patient</button>
+            <button onclick="switchTab('appointments')" data-page-link="appointments" data-nav-item="appointments" id="nav-appointments" class="tab-pill px-5 py-2 rounded-full text-sm font-medium bg-brand-600 text-white shadow-sm">Appointment</button>
+            <button onclick="switchTab('reports')" data-page-link="reports" data-nav-item="reports" id="nav-reports" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Report</button>
+            <button onclick="switchTab('inquiries')" data-page-link="inquiries" data-nav-item="inquiries" id="nav-inquiries" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
                 Inquiries
                 <span id="badge-inquiries" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full"></span>
             </button>
-            <button onclick="switchTab('staff')" data-page-link="staff" id="nav-staff" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Staff</button>
+            <button onclick="switchTab('staff')" data-page-link="staff" data-nav-item="staff" id="nav-staff" class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">Staff</button>
         </nav>
 
         <!-- User Actions & Profile -->
         <div class="flex items-center gap-3">
             
-            <button id="settings-nav-button" onclick="switchTab('settings')" data-page-link="settings" aria-label="Settings" title="Settings" aria-pressed="false" class="settings-nav-button w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
+            <button id="settings-nav-button" onclick="switchTab('settings')" data-page-link="settings" data-nav-item="system-settings" aria-label="System Settings" title="System Settings" aria-pressed="false" class="settings-nav-button w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
                 <i data-lucide="settings" class="w-4 h-4"></i>
             </button>
             
-            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+            <button type="button" onclick="switchTab('settings')" data-page-link="settings" data-nav-item="my-profile" aria-label="My Profile" title="My Profile" class="flex items-center gap-2 pl-2 border-l border-slate-200 text-left">
                 <div id="current-user-avatar" class="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-semibold overflow-hidden border border-brand-500">CS</div>
                 <div class="hidden sm:block text-left text-xs">
                     <p class="font-semibold text-slate-800" id="current-user-name">Clinic Staff</p>
                     <p class="text-slate-500" id="current-user-role">Clinic Staff</p>
                 </div>
-            </div>
+            </button>
+            <button type="button" onclick="settingsLogout()" aria-label="Logout" title="Logout" class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
         </div>
     </header>
 
     <!-- MOBILE NAVIGATION (Visible on small screens) -->
     <div class="mobile-navigation md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-medium overflow-x-auto">
-        <button onclick="switchTab('dashboard')" data-page-link="dashboard" class="py-1 px-3 text-slate-600">Dashboard</button>
-        <button onclick="switchTab('patients')" data-page-link="patients" class="py-1 px-3 text-slate-600">Patient</button>
-        <button onclick="switchTab('appointments')" data-page-link="appointments" class="py-1 px-3 bg-brand-600 text-white rounded-full">Appointment</button>
-        <button onclick="switchTab('reports')" data-page-link="reports" class="py-1 px-3 text-slate-600">Report</button>
-        <button onclick="switchTab('inquiries')" data-page-link="inquiries" class="py-1 px-3 text-slate-600">Inquiries</button>
-        <button onclick="switchTab('staff')" data-page-link="staff" class="py-1 px-3 text-slate-600">Staff</button>
-        <button onclick="switchTab('settings')" data-page-link="settings" class="py-1 px-3 text-slate-600">Settings</button>
+        <button onclick="switchTab('dashboard')" data-page-link="dashboard" data-nav-item="dashboard" class="py-1 px-3 text-slate-600">Dashboard</button>
+        <button onclick="switchTab('patients')" data-page-link="patients" data-nav-item="patients" class="py-1 px-3 text-slate-600">Patient</button>
+        <button onclick="switchTab('appointments')" data-page-link="appointments" data-nav-item="appointments" class="py-1 px-3 bg-brand-600 text-white rounded-full">Appointment</button>
+        <button onclick="switchTab('reports')" data-page-link="reports" data-nav-item="reports" class="py-1 px-3 text-slate-600">Report</button>
+        <button onclick="switchTab('inquiries')" data-page-link="inquiries" data-nav-item="inquiries" class="py-1 px-3 text-slate-600">Inquiries</button>
+        <button onclick="switchTab('staff')" data-page-link="staff" data-nav-item="staff" class="py-1 px-3 text-slate-600">Staff</button>
+        <button onclick="switchTab('settings')" data-page-link="settings" data-nav-item="system-settings" class="py-1 px-3 text-slate-600">System Settings</button>
+        <button onclick="switchTab('settings')" data-page-link="settings" data-nav-item="my-profile" class="py-1 px-3 text-slate-600">My Profile</button>
+        <button type="button" onclick="settingsLogout()" class="py-1 px-3 text-slate-600 whitespace-nowrap">Logout</button>
     </div>
 
     <!-- MAIN APP CONTAINER -->
@@ -122,6 +127,8 @@
         <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400"></i>
         <span id="toast-message">Action saved successfully!</span>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

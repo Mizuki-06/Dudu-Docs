@@ -7,7 +7,7 @@ create policy "Authorized staff can read patients"
 on public.patients
 for select
 to authenticated
-using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'clinic_staff', 'doctor'));
+using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'clinic_staff'));
 
 create policy "Admins and clinic staff can insert patients"
 on public.patients

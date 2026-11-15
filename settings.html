@@ -55,27 +55,27 @@
         </div>
 
         <nav class="hidden md:flex items-center bg-slate-100/80 p-1.5 rounded-full border border-slate-200/60 gap-1">
-            <button onclick="switchTab('dashboard')" data-page-link="dashboard"
+            <button onclick="switchTab('dashboard')" data-page-link="dashboard" data-nav-item="dashboard"
                     class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
                 Dashboard
             </button>
 
-            <button onclick="switchTab('patients')" data-page-link="patients"
+            <button onclick="switchTab('patients')" data-page-link="patients" data-nav-item="patients"
                     class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
                 Patient
             </button>
 
-            <button onclick="switchTab('appointments')" data-page-link="appointments"
+            <button onclick="switchTab('appointments')" data-page-link="appointments" data-nav-item="appointments"
                     class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
                 Appointment
             </button>
 
-            <button onclick="switchTab('reports')" data-page-link="reports"
+            <button onclick="switchTab('reports')" data-page-link="reports" data-nav-item="reports"
                     class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
                 Report
             </button>
 
-            <button onclick="switchTab('inquiries')" data-page-link="inquiries"
+            <button onclick="switchTab('inquiries')" data-page-link="inquiries" data-nav-item="inquiries"
                     class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
                 Inquiries
                 <span id="badge-inquiries"
@@ -83,7 +83,7 @@
                 </span>
             </button>
 
-            <button onclick="switchTab('staff')" data-page-link="staff"
+            <button onclick="switchTab('staff')" data-page-link="staff" data-nav-item="staff"
                     class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900">
                 Staff
             </button>
@@ -95,13 +95,20 @@
             <button id="settings-nav-button"
                     onclick="switchTab('settings')"
                     data-page-link="settings"
-                    aria-label="Settings"
-                    title="Settings"
+                    data-nav-item="system-settings"
+                    aria-label="System Settings"
+                    title="System Settings"
                     class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
                 <i data-lucide="settings" class="w-4 h-4"></i>
             </button>
 
-            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+            <button type="button"
+                    onclick="switchTab('settings')"
+                    data-page-link="settings"
+                    data-nav-item="my-profile"
+                    aria-label="My Profile"
+                    title="My Profile"
+                    class="flex items-center gap-2 pl-2 border-l border-slate-200 text-left">
                 <div id="settings-header-avatar"
                      class="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-semibold overflow-hidden">
                     SJ
@@ -114,26 +121,39 @@
                     </p>
                     <p class="text-slate-500" id="settings-header-role">Clinic Staff</p>
                 </div>
-            </div>
+            </button>
+            <button type="button"
+                    onclick="settingsLogout()"
+                    aria-label="Logout"
+                    title="Logout"
+                    class="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
         </div>
     </header>
 
     <!-- MOBILE NAVIGATION -->
     <div class="mobile-navigation md:hidden bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-around text-xs font-medium overflow-x-auto">
-        <button onclick="switchTab('dashboard')" data-page-link="dashboard"
+        <button onclick="switchTab('dashboard')" data-page-link="dashboard" data-nav-item="dashboard"
                 class="py-1 px-3 text-slate-600">Dashboard</button>
-        <button onclick="switchTab('patients')" data-page-link="patients"
+        <button onclick="switchTab('patients')" data-page-link="patients" data-nav-item="patients"
                 class="py-1 px-3 text-slate-600">Patient</button>
-        <button onclick="switchTab('appointments')" data-page-link="appointments"
+        <button onclick="switchTab('appointments')" data-page-link="appointments" data-nav-item="appointments"
                 class="py-1 px-3 text-slate-600">Appointment</button>
-        <button onclick="switchTab('reports')" data-page-link="reports"
+        <button onclick="switchTab('reports')" data-page-link="reports" data-nav-item="reports"
                 class="py-1 px-3 text-slate-600">Report</button>
-        <button onclick="switchTab('inquiries')" data-page-link="inquiries"
+        <button onclick="switchTab('inquiries')" data-page-link="inquiries" data-nav-item="inquiries"
                 class="py-1 px-3 text-slate-600">Inquiries</button>
-        <button onclick="switchTab('staff')" data-page-link="staff"
+        <button onclick="switchTab('staff')" data-page-link="staff" data-nav-item="staff"
                 class="py-1 px-3 text-slate-600">Staff</button>
         <button onclick="switchTab('settings')" data-page-link="settings"
-                class="py-1 px-3 text-slate-600">Settings</button>
+                data-nav-item="system-settings"
+                class="py-1 px-3 text-slate-600">System Settings</button>
+        <button onclick="switchTab('settings')" data-page-link="settings"
+                data-nav-item="my-profile"
+                class="py-1 px-3 text-slate-600">My Profile</button>
+        <button type="button" onclick="settingsLogout()"
+                class="py-1 px-3 text-slate-600 whitespace-nowrap">Logout</button>
     </div>
 
     <!-- MAIN CONTENT -->
@@ -708,16 +728,6 @@
 
         function settingsChangePassword() {
             alert("Password changing is not connected to a password-management system yet.");
-        }
-
-        async function settingsLogout() {
-            if (confirm("Are you sure you want to log out?")) {
-                await db.auth.signOut();
-                localStorage.removeItem(CURRENT_USER_STORAGE_KEY);
-                sessionStorage.clear();
-
-                window.location.href = "login.html";
-            }
         }
 
         document.getElementById("settings-photo-input")
