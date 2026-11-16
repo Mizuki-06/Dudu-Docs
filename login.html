@@ -15,6 +15,10 @@
             padding: 0;
         }
 
+        [hidden] {
+            display: none !important;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f1f5f9;
@@ -447,6 +451,38 @@
                 </form>
 
                 <p id="loginMessage" class="message" role="alert"></p>
+
+                <div id="mfaChallengePanel" hidden style="margin-top: 1.25rem;">
+                    <h2 class="form-title">Two-factor verification</h2>
+                    <p class="form-subtitle">
+                        Enter the six-digit code from your authenticator app.
+                    </p>
+                    <form id="mfaChallengeForm" class="login-form">
+                        <div class="input-group">
+                            <label for="mfaCode" class="input-label">
+                                Authenticator code
+                            </label>
+                            <input id="mfaCode"
+                                   type="text"
+                                   class="text-input"
+                                   inputmode="numeric"
+                                   autocomplete="one-time-code"
+                                   pattern="[0-9]{6}"
+                                   maxlength="6"
+                                   required>
+                        </div>
+                        <button type="submit"
+                                id="mfaVerifyButton"
+                                class="submit-btn">
+                            Verify code
+                        </button>
+                    </form>
+                    <button type="button"
+                            id="mfaCancelButton"
+                            class="forgot-link mt-3">
+                        Use a different account
+                    </button>
+                </div>
             </div>
 
             <!-- ========================= -->
@@ -619,10 +655,14 @@
         const rememberCheckbox = document.getElementById("remember");
 
         const loginForm = document.getElementById("loginForm");
+        const mfaChallengePanel = document.getElementById("mfaChallengePanel");
+        const mfaChallengeForm = document.getElementById("mfaChallengeForm");
+        const mfaCode = document.getElementById("mfaCode");
         const forgotForm = document.getElementById("forgotForm");
         const resetForm = document.getElementById("resetForm");
 
         const loginButton = document.getElementById("loginButton");
+        const mfaVerifyButton = document.getElementById("mfaVerifyButton");
         const forgotButton = document.getElementById("forgotButton");
         const resetButton = document.getElementById("resetButton");
 
@@ -638,6 +678,10 @@
         // establishes a valid password recovery session.
         let recoveryVerified = false;
         let recoveryInProgress = false;
+        let pendingMfaUser = null;
+        let pendingMfaFactorId = null;
+        let pendingMfaEmail = "";
+        let pendingMfaRememberMe = null;
 
         // =====================================
         // SWITCH FORMS
@@ -666,6 +710,13 @@
             recoveryInProgress = false;
             resetButton.disabled = true;
             resetForm.reset();
+            loginForm.hidden = false;
+            mfaChallengePanel.hidden = true;
+            mfaChallengeForm.reset();
+            pendingMfaUser = null;
+            pendingMfaFactorId = null;
+            pendingMfaEmail = "";
+            pendingMfaRememberMe = null;
 
             clearMessage(loginMessage);
             clearMessage(forgotMessage);
@@ -709,6 +760,92 @@
         // LOGIN FUNCTION
         // =====================================
 
+        async function completeLogin(user, email, rememberMe) {
+            const { data: staff, error: staffError } = await db
+                .from("staff")
+                .select("staff_id, full_name, role, status")
+                .eq("auth_user_id", user.id)
+                .maybeSingle();
+
+            if (staffError) {
+                console.error("Staff lookup error:", staffError);
+                throw new Error("Could not verify your clinic account.");
+            }
+
+            if (!staff) {
+                throw new Error(
+                    "This account is not registered in the clinic staff records."
+                );
+            }
+
+            const status = String(staff.status || "").trim().toLowerCase();
+            if (status !== "active") {
+                throw new Error(
+                    "Your clinic account is inactive. Contact the administrator."
+                );
+            }
+
+            const role = String(staff.role || "").trim().toLowerCase();
+            const allowedRoles = ["admin", "clinic_staff", "doctor"];
+            if (!allowedRoles.includes(role)) {
+                throw new Error(
+                    "This account is not authorized for the clinic portal."
+                );
+            }
+
+            const fullName = String(staff.full_name || "").trim() || email;
+            const metadata = user.user_metadata || {};
+            const avatarCandidate =
+                metadata.avatar_url || metadata.avatarUrl || metadata.picture;
+            const avatarUrl = typeof avatarCandidate === "string"
+                ? avatarCandidate
+                : "";
+            const profile = {
+                id: user.id,
+                authUserId: user.id,
+                staffId: staff.staff_id,
+                fullName,
+                name: fullName,
+                email: user.email || email,
+                role,
+                avatarUrl
+            };
+
+            localStorage.setItem(
+                "babydududocs_current_user",
+                JSON.stringify(profile)
+            );
+
+            if (rememberMe === true) {
+                localStorage.setItem("rememberedEmail", email);
+            } else if (rememberMe === false) {
+                localStorage.removeItem("rememberedEmail");
+            }
+
+            window.location.href = "index.html";
+        }
+
+        async function showMfaChallenge(user, email, rememberMe) {
+            const { data, error } = await db.auth.mfa.listFactors();
+            if (error) throw error;
+
+            const factor = (data.totp || []).find(item => item.status === "verified");
+            if (!factor) {
+                throw new Error(
+                    "Your account requires a verification method this sign-in page does not support. Contact an administrator."
+                );
+            }
+
+            pendingMfaUser = user;
+            pendingMfaFactorId = factor.id;
+            pendingMfaEmail = email;
+            pendingMfaRememberMe = rememberMe;
+            loginForm.hidden = true;
+            mfaChallengePanel.hidden = false;
+            mfaCode.value = "";
+            mfaCode.focus();
+        }
+
         async function handleLogin(event) {
             event.preventDefault();
 
@@ -733,73 +870,24 @@
                 }
                 authenticatedUserId = data.user.id;
 
-                const { data: staff, error: staffError } = await db
-                    .from("staff")
-                    .select("staff_id, full_name, role, status")
-                    .eq("auth_user_id", data.user.id)
-                    .maybeSingle();
+                const { data: assurance, error: assuranceError } =
+                    await db.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (assuranceError) throw assuranceError;
 
-                if (staffError) {
-                    console.error("Staff lookup error:", staffError);
-                    throw new Error("Could not verify your clinic account.");
+                if (
+                    assurance.nextLevel === "aal2" &&
+                    assurance.currentLevel !== "aal2"
+                ) {
+                    await showMfaChallenge(data.user, email, rememberMe);
+                    return;
                 }
 
-                if (!staff) {
-                    throw new Error(
-                        "This account is not registered in the clinic staff records."
-                    );
-                }
-
-                const status = String(staff.status || "").trim().toLowerCase();
-                if (status !== "active") {
-                    throw new Error(
-                        "Your clinic account is inactive. Contact the administrator."
-                    );
-                }
-
-                const role = String(staff.role || "").trim().toLowerCase();
-                const allowedRoles = ["admin", "clinic_staff", "doctor"];
-                if (!allowedRoles.includes(role)) {
-                    throw new Error(
-                        "This account is not authorized for the clinic portal."
-                    );
-                }
-
-                const fullName = String(staff.full_name || "").trim() || email;
-                const metadata = data.user.user_metadata || {};
-                const avatarCandidate =
-                    metadata.avatar_url || metadata.avatarUrl || metadata.picture;
-                const avatarUrl = typeof avatarCandidate === "string"
-                    ? avatarCandidate
-                    : "";
-
-                const profile = {
-                    id: data.user.id,
-                    authUserId: data.user.id,
-                    staffId: staff.staff_id,
-                    fullName,
-                    name: fullName,
-                    email: data.user.email || email,
-                    role,
-                    avatarUrl
-                };
-
-                localStorage.setItem(
-                    "babydududocs_current_user",
-                    JSON.stringify(profile)
-                );
-
-                if (rememberMe) {
-                    localStorage.setItem("rememberedEmail", email);
-                } else {
-                    localStorage.removeItem("rememberedEmail");
-                }
-
-                window.location.href = "index.html";
+                await completeLogin(data.user, email, rememberMe);
             } catch (error) {
                 if (authenticatedUserId) {
                     try {
-                        const { error: signOutError } = await db.auth.signOut();
+                        const { error: signOutError } =
+                            await db.auth.signOut({ scope: "local" });
                         if (signOutError) throw signOutError;
                     } catch (signOutError) {
                         console.error(
@@ -821,7 +909,117 @@
             }
         }
 
+        async function handleMfaVerification(event) {
+            event.preventDefault();
+            if (!pendingMfaFactorId || !pendingMfaUser) return;
+
+            mfaVerifyButton.disabled = true;
+            mfaVerifyButton.textContent = "Verifying...";
+            clearMessage(loginMessage);
+            let verified = false;
+
+            try {
+                const { data: challenge, error: challengeError } =
+                    await db.auth.mfa.challenge({
+                        factorId: pendingMfaFactorId
+                    });
+                if (challengeError) throw challengeError;
+
+                const { error: verifyError } = await db.auth.mfa.verify({
+                    factorId: pendingMfaFactorId,
+                    challengeId: challenge.id,
+                    code: mfaCode.value.trim()
+                });
+                if (verifyError) throw verifyError;
+                verified = true;
+
+                await completeLogin(
+                    pendingMfaUser,
+                    pendingMfaEmail,
+                    pendingMfaRememberMe
+                );
+            } catch (error) {
+                if (verified) {
+                    try {
+                        const { error: signOutError } =
+                            await db.auth.signOut({ scope: "local" });
+                        if (signOutError) throw signOutError;
+                    } catch (signOutError) {
+                        console.error(
+                            "Could not end the rejected MFA session:",
+                            signOutError
+                        );
+                    }
+                    localStorage.removeItem("babydududocs_current_user");
+                    pendingMfaUser = null;
+                    pendingMfaFactorId = null;
+                    mfaChallengePanel.hidden = true;
+                    loginForm.hidden = false;
+                }
+
+                showMessage(
+                    loginMessage,
+                    error.message || "The code could not be verified. Try again.",
+                    "error"
+                );
+            } finally {
+                mfaVerifyButton.disabled = false;
+                mfaVerifyButton.textContent = "Verify code";
+            }
+        }
+
+        async function cancelMfaLogin() {
+            try {
+                const { error } = await db.auth.signOut({ scope: "local" });
+                if (error) throw error;
+
+                localStorage.removeItem("babydududocs_current_user");
+                showLogin();
+            } catch (error) {
+                showMessage(
+                    loginMessage,
+                    error.message || "Could not end this sign-in attempt.",
+                    "error"
+                );
+            }
+        }
+
+        async function initializeRequiredMfaLogin() {
+            try {
+                const { data, error } = await db.auth.getUser();
+                if (error) throw error;
+                if (!data.user) {
+                    throw new Error(
+                        "Your session could not be verified. Sign in again."
+                    );
+                }
+
+                const { data: assurance, error: assuranceError } =
+                    await db.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (assuranceError) throw assuranceError;
+
+                if (
+                    assurance.currentLevel === "aal2" ||
+                    assurance.nextLevel !== "aal2"
+                ) {
+                    await completeLogin(data.user, data.user.email || "", null);
+                    return;
+                }
+
+                await showMfaChallenge(data.user, data.user.email || "", null);
+            } catch (challengeError) {
+                showMessage(
+                    loginMessage,
+                    challengeError.message || "Could not start MFA verification.",
+                    "error"
+                );
+            }
+        }
+
         loginForm.addEventListener("submit", handleLogin);
+        mfaChallengeForm.addEventListener("submit", handleMfaVerification);
+        document.getElementById("mfaCancelButton")
+            .addEventListener("click", cancelMfaLogin);
 
         // =====================================
         // OPEN FORGOT PASSWORD FORM
@@ -1185,6 +1383,9 @@
         const loginError = new URLSearchParams(
             window.location.search
         ).get("error");
+        const mfaRequired = new URLSearchParams(
+            window.location.search
+        ).get("mfa") === "required";
 
         if (loginError === "unauthorized") {
             showMessage(
@@ -1193,6 +1394,12 @@
                 "to access patient records.",
                 "error"
             );
+        }
+
+        if (mfaRequired && !hasRecoveryParameters()) {
+            loginForm.hidden = true;
+            mfaChallengePanel.hidden = false;
+            initializeRequiredMfaLogin();
         }
 
         // =====================================

@@ -237,6 +237,19 @@ async function initializeAuthenticatedUser() {
     const user = data?.user;
     if (!user) throw new Error('You are not signed in. Please sign in again.');
 
+    const { data: assurance, error: assuranceError } =
+        await db.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assuranceError) {
+        throw new Error(`Could not verify your sign-in security level: ${assuranceError.message}`);
+    }
+    if (
+        assurance.nextLevel === 'aal2' &&
+        assurance.currentLevel !== 'aal2'
+    ) {
+        window.location.replace('login.html?mfa=required');
+        throw new Error('Two-factor verification is required to continue.');
+    }
+
     const { data: staff, error: staffError } = await db
         .from('staff')
         .select('staff_id, full_name, role, status')
@@ -2059,6 +2072,12 @@ window.addEventListener('load', function() {
             if (!enforcePageAccess()) return;
             initializeSessionTimeout(currentAuthUser.id);
             initializeRoleBasedControls();
+            if (
+                document.body.dataset.page === 'settings' &&
+                typeof settingsInitializeMfa === 'function'
+            ) {
+                await settingsInitializeMfa();
+            }
             if (typeof settingsInitializeAdminProfiles === 'function') {
                 await settingsInitializeAdminProfiles();
             }
@@ -2070,6 +2089,9 @@ window.addEventListener('load', function() {
                 error.message === 'Auth session missing'
             ) {
                 window.location.replace('login.html');
+                return;
+            }
+            if (error.message === 'Two-factor verification is required to continue.') {
                 return;
             }
             const message = error.message || 'Could not verify your clinic account.';

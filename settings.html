@@ -326,10 +326,93 @@
                     <label class="settings-toggle">
                         <span>
                             <b>Two-factor authentication</b>
-                            <small>Use an extra verification step at sign-in.</small>
+                            <small id="settings-mfa-status">Checking authenticator status...</small>
                         </span>
-                        <input id="settings-two-factor" type="checkbox" checked>
+                        <input id="settings-two-factor"
+                               type="checkbox"
+                               disabled
+                               onchange="settingsToggleMfa(this)">
                     </label>
+
+                    <p id="settings-mfa-error"
+                       class="hidden mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+                       role="alert"></p>
+
+                    <div id="settings-mfa-enrollment" class="hidden mt-4 space-y-3">
+                        <p class="settings-note">
+                            Scan this QR code with an authenticator app, then enter its
+                            current six-digit code to enable two-factor authentication.
+                        </p>
+                        <img id="settings-mfa-qr"
+                             alt="QR code for authenticator app setup"
+                             class="mx-auto max-h-52 max-w-52 rounded-lg border p-2">
+                        <p class="settings-note">
+                            If you cannot scan the QR code, enter this setup key manually:
+                            <code id="settings-mfa-secret"
+                                  class="break-all font-mono text-slate-800"></code>
+                        </p>
+                        <form id="settings-mfa-enrollment-form"
+                              class="space-y-3"
+                              onsubmit="settingsVerifyMfaEnrollment(event)">
+                            <label class="settings-label block">
+                                Authenticator code
+                                <input id="settings-mfa-enrollment-code"
+                                       type="text"
+                                       inputmode="numeric"
+                                       autocomplete="one-time-code"
+                                       pattern="[0-9]{6}"
+                                       maxlength="6"
+                                       required
+                                       class="settings-input">
+                            </label>
+                            <div class="flex gap-2">
+                                <button type="submit"
+                                        id="settings-mfa-enrollment-submit"
+                                        class="px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">
+                                    Verify and enable
+                                </button>
+                                <button type="button"
+                                        id="settings-mfa-enrollment-cancel"
+                                        onclick="settingsCancelMfaEnrollment()"
+                                        class="px-3 py-2 rounded-xl border text-sm hover:bg-slate-50">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <form id="settings-mfa-disable-form"
+                          class="hidden mt-4 space-y-3"
+                          onsubmit="settingsDisableMfa(event)">
+                        <p class="settings-note">
+                            Enter a current code from your authenticator app to turn off
+                            two-factor authentication.
+                        </p>
+                        <label class="settings-label block">
+                            Authenticator code
+                            <input id="settings-mfa-disable-code"
+                                   type="text"
+                                   inputmode="numeric"
+                                   autocomplete="one-time-code"
+                                   pattern="[0-9]{6}"
+                                   maxlength="6"
+                                   required
+                                   class="settings-input">
+                        </label>
+                        <div class="flex gap-2">
+                            <button type="submit"
+                                    id="settings-mfa-disable-submit"
+                                    class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold">
+                                Turn off 2FA
+                            </button>
+                            <button type="button"
+                                    id="settings-mfa-disable-cancel"
+                                    onclick="settingsCancelMfaDisable()"
+                                    class="px-3 py-2 rounded-xl border text-sm hover:bg-slate-50">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
 
                     <div class="flex justify-between items-center pt-4">
                         <span class="text-sm">Current browser session</span>
@@ -417,7 +500,6 @@
         const CURRENT_USER_STORAGE_KEY = "babydududocs_current_user";
 
         const settingsDefaults = {
-            twoFactor: true,
             language: "English (US)",
             dateFormat: "MM / DD / YYYY",
             timezone: "Philippine Standard Time",
@@ -429,6 +511,9 @@
         let currentSettingsUser = null;
         let managedProfiles = [];
         let selectedProfile = null;
+        let settingsMfaFactors = [];
+        let settingsMfaEnrollmentFactorId = null;
+        let settingsMfaDisableFactorId = null;
 
         function settingsReadCurrentUser() {
             try {
@@ -461,7 +546,6 @@
         function settingsGetPersonalSettings() {
             return {
                 profileUserId: currentSettingsUser?.id || "",
-                twoFactor: document.getElementById("settings-two-factor").checked,
                 language: document.getElementById("settings-language").value,
                 dateFormat: document.getElementById("settings-date").value,
                 timezone: document.getElementById("settings-timezone").value,
@@ -492,7 +576,6 @@
                 : storedSettings;
             const settings = {
                 profileUserId: currentSettingsUser?.id || "",
-                twoFactor: saved.twoFactor ?? settingsDefaults.twoFactor,
                 language: saved.language ?? settingsDefaults.language,
                 dateFormat: saved.dateFormat ?? settingsDefaults.dateFormat,
                 timezone: saved.timezone ?? settingsDefaults.timezone,
@@ -500,14 +583,229 @@
                     String(saved.sessionTimeoutMinutes ?? settingsDefaults.sessionTimeoutMinutes)
             };
 
-            document.getElementById("settings-two-factor").checked =
-                Boolean(settings.twoFactor);
             document.getElementById("settings-language").value = settings.language;
             document.getElementById("settings-date").value = settings.dateFormat;
             document.getElementById("settings-timezone").value = settings.timezone;
             document.getElementById("settings-session-timeout").value =
                 settings.sessionTimeoutMinutes;
             originalSettings = structuredClone(settings);
+        }
+
+        function settingsSetMfaError(message) {
+            const errorElement = document.getElementById("settings-mfa-error");
+            errorElement.textContent = message;
+            errorElement.classList.remove("hidden");
+        }
+
+        function settingsClearMfaError() {
+            const errorElement = document.getElementById("settings-mfa-error");
+            errorElement.textContent = "";
+            errorElement.classList.add("hidden");
+        }
+
+        function settingsGetVerifiedTotpFactors() {
+            return settingsMfaFactors.filter(factor =>
+                factor.factor_type === "totp" && factor.status === "verified"
+            );
+        }
+
+        function settingsRenderMfaStatus() {
+            const verifiedFactors = settingsGetVerifiedTotpFactors();
+            const toggle = document.getElementById("settings-two-factor");
+            const status = document.getElementById("settings-mfa-status");
+            toggle.checked = verifiedFactors.length > 0;
+            toggle.disabled = false;
+            status.textContent = verifiedFactors.length
+                ? "Enabled with an authenticator app. A code is required at sign-in."
+                : "Add an authenticator app to require a code at sign-in.";
+        }
+
+        async function settingsInitializeMfa() {
+            const toggle = document.getElementById("settings-two-factor");
+            toggle.disabled = true;
+            settingsClearMfaError();
+
+            try {
+                const { data, error } = await db.auth.mfa.listFactors();
+                if (error) throw error;
+
+                settingsMfaFactors = data.totp || [];
+                settingsRenderMfaStatus();
+            } catch (error) {
+                console.error("Could not load authenticator status:", error);
+                document.getElementById("settings-mfa-status").textContent =
+                    "Could not load authenticator status.";
+                settingsSetMfaError(
+                    error.message || "Could not load two-factor authentication status."
+                );
+            }
+        }
+
+        async function settingsToggleMfa(toggle) {
+            settingsClearMfaError();
+            toggle.disabled = true;
+
+            if (toggle.checked) {
+                toggle.checked = false;
+                try {
+                    const { data, error } = await db.auth.mfa.enroll({
+                        factorType: "totp",
+                        friendlyName: "Baby Dudu Docs authenticator"
+                    });
+                    if (error) throw error;
+
+                    settingsMfaEnrollmentFactorId = data.id;
+                    document.getElementById("settings-mfa-qr").src =
+                        data.totp.qr_code;
+                    document.getElementById("settings-mfa-secret").textContent =
+                        data.totp.secret;
+                    document.getElementById("settings-mfa-enrollment")
+                        .classList.remove("hidden");
+                    document.getElementById("settings-mfa-enrollment-code").focus();
+                    return;
+                } catch (error) {
+                    console.error("Could not start authenticator enrollment:", error);
+                    settingsSetMfaError(
+                        error.message || "Could not set up an authenticator app."
+                    );
+                    toggle.disabled = false;
+                    return;
+                }
+            } else if (settingsGetVerifiedTotpFactors().length) {
+                toggle.checked = true;
+                settingsMfaDisableFactorId =
+                    settingsGetVerifiedTotpFactors()[0].id;
+                document.getElementById("settings-mfa-disable-form")
+                    .classList.remove("hidden");
+                document.getElementById("settings-mfa-disable-code").focus();
+                return;
+            }
+
+            toggle.disabled = false;
+        }
+
+        async function settingsVerifyMfaEnrollment(event) {
+            event.preventDefault();
+            const submitButton =
+                document.getElementById("settings-mfa-enrollment-submit");
+            const code = document.getElementById("settings-mfa-enrollment-code")
+                .value.trim();
+            submitButton.disabled = true;
+            settingsClearMfaError();
+
+            try {
+                const { data: challenge, error: challengeError } =
+                    await db.auth.mfa.challenge({
+                        factorId: settingsMfaEnrollmentFactorId
+                    });
+                if (challengeError) throw challengeError;
+
+                const { error: verifyError } = await db.auth.mfa.verify({
+                    factorId: settingsMfaEnrollmentFactorId,
+                    challengeId: challenge.id,
+                    code
+                });
+                if (verifyError) throw verifyError;
+
+                settingsMfaEnrollmentFactorId = null;
+                document.getElementById("settings-mfa-enrollment")
+                    .classList.add("hidden");
+                document.getElementById("settings-mfa-enrollment-form").reset();
+                await settingsInitializeMfa();
+                settingsShowToast("Two-factor authentication enabled.");
+            } catch (error) {
+                console.error("Could not verify authenticator code:", error);
+                settingsSetMfaError(
+                    error.message || "That code could not be verified. Try the latest code."
+                );
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
+        async function settingsCancelMfaEnrollment() {
+            if (!settingsMfaEnrollmentFactorId) return;
+
+            const cancelButton =
+                document.getElementById("settings-mfa-enrollment-cancel");
+            cancelButton.disabled = true;
+            settingsClearMfaError();
+
+            try {
+                const { error } = await db.auth.mfa.unenroll({
+                    factorId: settingsMfaEnrollmentFactorId
+                });
+                if (error) throw error;
+
+                settingsMfaEnrollmentFactorId = null;
+                document.getElementById("settings-mfa-enrollment")
+                    .classList.add("hidden");
+                document.getElementById("settings-mfa-enrollment-form").reset();
+                await settingsInitializeMfa();
+            } catch (error) {
+                console.error("Could not cancel authenticator enrollment:", error);
+                settingsSetMfaError(
+                    error.message || "Could not cancel authenticator setup."
+                );
+            } finally {
+                cancelButton.disabled = false;
+            }
+        }
+
+        async function settingsDisableMfa(event) {
+            event.preventDefault();
+            const submitButton =
+                document.getElementById("settings-mfa-disable-submit");
+            const code = document.getElementById("settings-mfa-disable-code")
+                .value.trim();
+            submitButton.disabled = true;
+            settingsClearMfaError();
+
+            try {
+                const { data: challenge, error: challengeError } =
+                    await db.auth.mfa.challenge({
+                        factorId: settingsMfaDisableFactorId
+                    });
+                if (challengeError) throw challengeError;
+
+                const { error: verifyError } = await db.auth.mfa.verify({
+                    factorId: settingsMfaDisableFactorId,
+                    challengeId: challenge.id,
+                    code
+                });
+                if (verifyError) throw verifyError;
+
+                const { error: unenrollError } = await db.auth.mfa.unenroll({
+                    factorId: settingsMfaDisableFactorId
+                });
+                if (unenrollError) throw unenrollError;
+
+                settingsMfaDisableFactorId = null;
+                document.getElementById("settings-mfa-disable-form").reset();
+                document.getElementById("settings-mfa-disable-form")
+                    .classList.add("hidden");
+                await settingsInitializeMfa();
+                settingsShowToast("Authenticator removed.");
+            } catch (error) {
+                console.error("Could not turn off authenticator:", error);
+                settingsSetMfaError(
+                    error.message || "Could not remove the authenticator."
+                );
+            } finally {
+                submitButton.disabled = false;
+            }
+        }
+
+        function settingsCancelMfaDisable() {
+            document.getElementById("settings-mfa-disable-form").reset();
+            document.getElementById("settings-mfa-disable-form")
+                .classList.add("hidden");
+            settingsMfaDisableFactorId = null;
+            settingsClearMfaError();
+            const toggle = document.getElementById("settings-two-factor");
+            toggle.checked =
+                settingsGetVerifiedTotpFactors().length > 0;
+            toggle.disabled = false;
         }
 
         function settingsPersonalSettingsAreDirty() {
