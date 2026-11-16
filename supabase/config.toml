@@ -1,2 +1,5 @@
 [functions.patients]
 verify_jwt = true
+
+[functions.admin-profiles]
+verify_jwt = true

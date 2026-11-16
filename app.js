@@ -17,6 +17,132 @@ let appData = {
 let currentUserRole = '';
 let currentAuthUser = null;
 let currentStaff = null;
+const APP_SETTINGS_STORAGE_KEY = 'babydududocs_settings';
+const SESSION_TIMEOUT_DEFAULT_MINUTES = 10;
+const SESSION_TIMEOUT_OPTIONS = [5, 10, 15, 30];
+
+function getSessionActivityStorageKey(userId) {
+    return `babydududocs_last_activity_${userId}`;
+}
+
+function getSessionTimeoutStorageKey(userId) {
+    return `babydududocs_session_timeout_${userId}`;
+}
+
+function getSessionTimeoutMinutes(userId) {
+    try {
+        const saved = JSON.parse(
+            localStorage.getItem(APP_SETTINGS_STORAGE_KEY) || 'null'
+        );
+        if (
+            !saved ||
+            (saved.profileUserId && saved.profileUserId !== userId)
+        ) {
+            return SESSION_TIMEOUT_DEFAULT_MINUTES;
+        }
+
+        const minutes = Number(saved.sessionTimeoutMinutes);
+        return SESSION_TIMEOUT_OPTIONS.includes(minutes)
+            ? minutes
+            : SESSION_TIMEOUT_DEFAULT_MINUTES;
+    } catch (error) {
+        console.error('Could not read the session timeout preference:', error);
+        return SESSION_TIMEOUT_DEFAULT_MINUTES;
+    }
+}
+
+function initializeSessionTimeout(userId) {
+    if (!userId) return;
+
+    const activityKey = getSessionActivityStorageKey(userId);
+    const timeoutKey = getSessionTimeoutStorageKey(userId);
+    let lastActivityAt = 0;
+    let lastActivityWriteAt = 0;
+    let signingOutForTimeout = false;
+
+    function readLastActivity() {
+        try {
+            const stored = Number(localStorage.getItem(activityKey));
+            if (Number.isFinite(stored) && stored > 0) {
+                lastActivityAt = Math.max(lastActivityAt, stored);
+                return lastActivityAt;
+            }
+
+            lastActivityAt = Date.now();
+            localStorage.setItem(activityKey, String(lastActivityAt));
+        } catch (error) {
+            console.error('Could not read the last activity time:', error);
+            if (!lastActivityAt) lastActivityAt = Date.now();
+        }
+        return lastActivityAt;
+    }
+
+    function recordActivity(event) {
+        const now = Date.now();
+        lastActivityAt = now;
+        const throttleMs = event.type === 'mousemove' ? 5000 : 1000;
+        if (now - lastActivityWriteAt < throttleMs) return;
+
+        try {
+            localStorage.setItem(activityKey, String(now));
+            lastActivityWriteAt = now;
+        } catch (error) {
+            console.error('Could not save the last activity time:', error);
+        }
+    }
+
+    async function expireSession() {
+        if (signingOutForTimeout) return;
+        signingOutForTimeout = true;
+
+        try {
+            const { error } = await db.auth.signOut({ scope: 'local' });
+            if (error) throw error;
+
+            localStorage.removeItem('babydududocs_current_user');
+            localStorage.removeItem(activityKey);
+            sessionStorage.clear();
+            localStorage.setItem(timeoutKey, String(Date.now()));
+            window.location.replace('login.html');
+        } catch (error) {
+            signingOutForTimeout = false;
+            console.error('Could not end the idle session:', error);
+            showToast(
+                error.message
+                    ? `Session timed out, but sign-out failed: ${error.message}`
+                    : 'Session timed out, but sign-out failed. Please log out manually.'
+            );
+        }
+    }
+
+    function checkSessionTimeout() {
+        if (signingOutForTimeout) return;
+
+        const timeoutMs = getSessionTimeoutMinutes(userId) * 60 * 1000;
+        if (Date.now() - readLastActivity() >= timeoutMs) {
+            expireSession();
+        }
+    }
+
+    localStorage.removeItem(timeoutKey);
+    readLastActivity();
+
+    ['pointerdown', 'keydown', 'touchstart', 'scroll', 'mousemove'].forEach(eventName => {
+        window.addEventListener(eventName, recordActivity, { passive: true });
+    });
+    document.addEventListener('visibilitychange', checkSessionTimeout);
+    window.addEventListener('storage', event => {
+        if (event.key === timeoutKey && event.newValue) {
+            window.location.replace('login.html');
+        } else if (event.key === APP_SETTINGS_STORAGE_KEY) {
+            checkSessionTimeout();
+        } else if (event.key === activityKey) {
+            checkSessionTimeout();
+        }
+    });
+
+    window.setInterval(checkSessionTimeout, 15000);
+}
 
 const NAVIGATION_ROLE_PERMISSIONS = Object.freeze({
     dashboard: ['admin', 'clinic_staff', 'doctor'],
@@ -1555,6 +1681,10 @@ async function settingsLogout() {
         const { error } = await db.auth.signOut();
         if (error) throw error;
 
+        if (currentAuthUser?.id) {
+            localStorage.removeItem(getSessionActivityStorageKey(currentAuthUser.id));
+            localStorage.removeItem(getSessionTimeoutStorageKey(currentAuthUser.id));
+        }
         localStorage.removeItem('babydududocs_current_user');
         sessionStorage.clear();
         window.location.href = 'login.html';
@@ -1927,7 +2057,11 @@ window.addEventListener('load', function() {
         try {
             await initializeAuthenticatedUser();
             if (!enforcePageAccess()) return;
+            initializeSessionTimeout(currentAuthUser.id);
             initializeRoleBasedControls();
+            if (typeof settingsInitializeAdminProfiles === 'function') {
+                await settingsInitializeAdminProfiles();
+            }
             await loadAllDatabaseRecords();
         } catch (error) {
             console.error('Could not initialize the authenticated user:', error);

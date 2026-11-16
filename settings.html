@@ -78,9 +78,6 @@
             <button onclick="switchTab('inquiries')" data-page-link="inquiries" data-nav-item="inquiries"
                     class="tab-pill px-5 py-2 rounded-full text-sm font-medium text-slate-600 hover:text-slate-900 relative">
                 Inquiries
-                <span id="badge-inquiries"
-                      class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full">
-                </span>
             </button>
 
             <button onclick="switchTab('staff')" data-page-link="staff" data-nav-item="staff"
@@ -172,13 +169,16 @@
 
                 <div class="flex gap-2">
                     <button type="button"
+                            id="settings-cancel-button"
                             onclick="settingsCancelChanges()"
                             class="px-4 py-2 rounded-xl border bg-white text-sm">
                         Cancel
                     </button>
 
                     <button type="button"
+                            id="settings-save-button"
                             onclick="settingsSaveChanges()"
+                            disabled
                             class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">
                         Save changes
                     </button>
@@ -187,47 +187,36 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-                <!-- ACCOUNT AND PROFILE -->
+                <!-- STAFF PROFILE MANAGEMENT -->
                 <div class="settings-card">
                     <div class="settings-heading">
                         <span class="settings-icon">
-                            <i data-lucide="user-round"></i>
+                            <i data-lucide="users-round"></i>
                         </span>
                         <div>
-                            <h2>Account &amp; profile</h2>
-                            <p>Your personal details and contact information.</p>
+                            <h2>Staff profiles</h2>
+                            <p>Only administrators can change staff profile details.</p>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-3 my-4">
-                        <div id="settings-profile-avatar"
-                             class="w-16 h-16 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-lg overflow-hidden">
-                            SJ
-                        </div>
+                    <label class="settings-label block mt-4">
+                        Select profile
+                        <select id="settings-profile-select" class="settings-input" disabled>
+                            <option value="">Loading profiles...</option>
+                        </select>
+                    </label>
 
-                        <div>
-                            <button type="button"
-                                    onclick="document.getElementById('settings-photo-input').click()"
-                                    class="px-3 py-2 rounded-xl border text-sm hover:bg-slate-50">
-                                Change photo
-                            </button>
+                    <p id="settings-profile-error"
+                       class="hidden mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+                       role="alert"></p>
 
-                            <input type="file"
-                                   id="settings-photo-input"
-                                   accept="image/jpeg,image/png,image/webp"
-                                   hidden>
-
-                            <p class="settings-note mt-2">
-                                JPG, PNG, or WebP. Maximum 2 MB.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div id="settings-profile-fields"
+                         class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4"
+                         hidden>
                         <label class="settings-label">
                             Full name
                             <input id="settings-name"
-                                   value="Dr. Sarah Jenkins"
+                                   required
                                    autocomplete="name"
                                    class="settings-input">
                         </label>
@@ -236,32 +225,36 @@
                             Email address
                             <input id="settings-email"
                                    type="email"
-                                   value="sarah.jenkins@babydududocs.com"
+                                   required
                                    autocomplete="email"
                                    class="settings-input">
                         </label>
 
                         <label class="settings-label">
-                            Phone number
-                            <input id="settings-phone"
-                                   type="tel"
-                                   value="+1 (415) 555-0128"
-                                   autocomplete="tel"
+                            Role
+                            <select id="settings-role" class="settings-input">
+                                <option value="admin">Admin</option>
+                                <option value="clinic_staff">Clinic Staff</option>
+                                <option value="doctor">Doctor</option>
+                            </select>
+                        </label>
+
+                        <label class="settings-label">
+                            Specialization
+                            <input id="settings-specialization"
                                    class="settings-input">
                         </label>
 
                         <label class="settings-label">
-                            Role
-                            <input id="settings-role"
-                                   value="Clinic Staff"
-                                   disabled
-                                   class="settings-input">
+                            Status
+                            <select id="settings-status" class="settings-input">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
                         </label>
                     </div>
 
-                    <p class="settings-note mt-4">
-                        Your role is managed by your organization.
-                    </p>
+                    <p id="settings-profile-link-note" class="settings-note mt-3"></p>
                 </div>
 
                 <!-- SECURITY -->
@@ -281,10 +274,53 @@
                         <p class="settings-note">Manage your account password.</p>
 
                         <button type="button"
+                                id="settings-change-password-button"
                                 onclick="settingsChangePassword()"
                                 class="mt-3 px-3 py-2 rounded-xl border text-sm hover:bg-slate-50">
                             Change password
                         </button>
+
+                        <form id="settings-password-form"
+                              class="hidden mt-4 space-y-3"
+                              onsubmit="settingsSubmitPasswordChange(event)">
+                            <label class="settings-label block">
+                                New password
+                                <input id="settings-new-password"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       minlength="8"
+                                       required
+                                       class="settings-input">
+                            </label>
+
+                            <label class="settings-label block">
+                                Confirm new password
+                                <input id="settings-confirm-password"
+                                       type="password"
+                                       autocomplete="new-password"
+                                       minlength="8"
+                                       required
+                                       class="settings-input">
+                            </label>
+
+                            <p id="settings-password-error"
+                               class="hidden rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+                               role="alert"></p>
+
+                            <div class="flex gap-2">
+                                <button type="submit"
+                                        id="settings-password-submit"
+                                        class="px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold">
+                                    Update password
+                                </button>
+                                <button type="button"
+                                        id="settings-password-cancel"
+                                        onclick="settingsCancelPasswordChange()"
+                                        class="px-3 py-2 rounded-xl border text-sm hover:bg-slate-50">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
                     <label class="settings-toggle">
@@ -299,51 +335,6 @@
                         <span class="text-sm">Current browser session</span>
                         <span class="text-xs text-emerald-700">Current</span>
                     </div>
-                </div>
-
-                <!-- NOTIFICATIONS -->
-                <div class="settings-card">
-                    <div class="settings-heading">
-                        <span class="settings-icon">
-                            <i data-lucide="bell"></i>
-                        </span>
-                        <div>
-                            <h2>Notifications</h2>
-                            <p>Choose the email updates you want to receive.</p>
-                        </div>
-                    </div>
-
-                    <label class="settings-toggle">
-                        <span>
-                            <b>Appointment updates</b>
-                            <small>New bookings, changes and cancellations.</small>
-                        </span>
-                        <input id="settings-appointment-updates"
-                               type="checkbox"
-                               checked>
-                    </label>
-
-                    <label class="settings-toggle">
-                        <span>
-                            <b>Patient inquiries</b>
-                            <small>New messages and patient feedback.</small>
-                        </span>
-                        <input id="settings-patient-inquiries"
-                               type="checkbox"
-                               checked>
-                    </label>
-
-                    <label class="settings-toggle">
-                        <span>
-                            <b>Weekly summary</b>
-                            <small>A weekly overview of clinic activity.</small>
-                        </span>
-                        <input id="settings-weekly-summary" type="checkbox">
-                    </label>
-
-                    <p class="settings-note bg-slate-50 p-3 rounded-xl mt-3">
-                        Important security alerts are always sent to your email.
-                    </p>
                 </div>
 
                 <!-- PREFERENCES: APPEARANCE REMOVED -->
@@ -387,6 +378,16 @@
                             <option>UTC</option>
                         </select>
                     </label>
+
+                    <label class="settings-label block mt-3">
+                        Session timeout
+                        <select id="settings-session-timeout" class="settings-input">
+                            <option value="5">5 minutes of inactivity</option>
+                            <option value="10">10 minutes of inactivity</option>
+                            <option value="15">15 minutes of inactivity</option>
+                            <option value="30">30 minutes of inactivity</option>
+                        </select>
+                    </label>
                 </div>
             </div>
 
@@ -414,26 +415,20 @@
         const SETTINGS_STORAGE_KEY = "babydududocs_settings";
         const LEGACY_SETTINGS_KEY = "youcare_settings";
         const CURRENT_USER_STORAGE_KEY = "babydududocs_current_user";
-        const MAX_PHOTO_SIZE = 2 * 1024 * 1024;
 
         const settingsDefaults = {
-            name: "Dr. Sarah Jenkins",
-            email: "sarah.jenkins@babydududocs.com",
-            role: "Clinic Staff",
-            phone: "+1 (415) 555-0128",
             twoFactor: true,
-            appointmentUpdates: true,
-            patientInquiries: true,
-            weeklySummary: false,
             language: "English (US)",
             dateFormat: "MM / DD / YYYY",
             timezone: "Philippine Standard Time",
-            profilePhoto: ""
+            sessionTimeoutMinutes: "10"
         };
 
-        let pendingProfilePhoto = undefined;
+        let originalProfile = null;
         let originalSettings = null;
         let currentSettingsUser = null;
+        let managedProfiles = [];
+        let selectedProfile = null;
 
         function settingsReadCurrentUser() {
             try {
@@ -463,38 +458,15 @@
             }
         }
 
-        function settingsGetCurrentForm() {
-            const oldSettings = settingsReadSaved();
-            const profileSettings =
-                currentSettingsUser && oldSettings.profileUserId === currentSettingsUser.id
-                    ? oldSettings
-                    : {};
-
+        function settingsGetPersonalSettings() {
             return {
-                name: document.getElementById("settings-name").value.trim(),
-                email: document.getElementById("settings-email").value.trim(),
-                phone: document.getElementById("settings-phone").value.trim(),
                 profileUserId: currentSettingsUser?.id || "",
-
                 twoFactor: document.getElementById("settings-two-factor").checked,
-
-                appointmentUpdates:
-                    document.getElementById("settings-appointment-updates").checked,
-
-                patientInquiries:
-                    document.getElementById("settings-patient-inquiries").checked,
-
-                weeklySummary:
-                    document.getElementById("settings-weekly-summary").checked,
-
                 language: document.getElementById("settings-language").value,
                 dateFormat: document.getElementById("settings-date").value,
                 timezone: document.getElementById("settings-timezone").value,
-
-                profilePhoto:
-                    pendingProfilePhoto !== undefined
-                        ? pendingProfilePhoto
-                        : (profileSettings.profilePhoto || "")
+                sessionTimeoutMinutes:
+                    document.getElementById("settings-session-timeout").value
             };
         }
 
@@ -511,230 +483,361 @@
             }, 3000);
         }
 
-        function settingsGetInitials(name) {
-            return name
-                .split(/\s+/)
-                .filter(Boolean)
-                .slice(0, 2)
-                .map(word => word.charAt(0).toUpperCase())
-                .join("");
-        }
-
-        function settingsRenderAvatar(element, name, photo) {
-            element.replaceChildren();
-
-            if (photo) {
-                const image = document.createElement("img");
-                image.src = photo;
-                image.alt = "Profile photo";
-                image.className = "w-full h-full object-cover";
-                element.appendChild(image);
-            } else {
-                element.textContent = settingsGetInitials(name);
-            }
-        }
-
-        function settingsUpdateHeader(settings) {
-            document.getElementById("settings-header-name").textContent =
-                settings.name || settingsDefaults.name;
-
-            const role = document.getElementById("settings-header-role");
-            if (role) {
-                role.textContent = currentSettingsUser?.role === "clinic_staff"
-                    ? "Clinic Staff"
-                    : settingsDefaults.role;
-            }
-
-            settingsRenderAvatar(
-                document.getElementById("settings-header-avatar"),
-                settings.name || settingsDefaults.name,
-                settings.profilePhoto
-            );
-        }
-
-        function settingsPopulateForm(settings) {
-            document.getElementById("settings-name").value = settings.name;
-            document.getElementById("settings-email").value = settings.email;
-            document.getElementById("settings-phone").value = settings.phone;
-
-            document.getElementById("settings-two-factor").checked =
-                Boolean(settings.twoFactor);
-
-            document.getElementById("settings-appointment-updates").checked =
-                Boolean(settings.appointmentUpdates);
-
-            document.getElementById("settings-patient-inquiries").checked =
-                Boolean(settings.patientInquiries);
-
-            document.getElementById("settings-weekly-summary").checked =
-                Boolean(settings.weeklySummary);
-
-            document.getElementById("settings-language").value = settings.language;
-            document.getElementById("settings-date").value = settings.dateFormat;
-            document.getElementById("settings-timezone").value = settings.timezone;
-
-            settingsRenderAvatar(
-                document.getElementById("settings-profile-avatar"),
-                settings.name,
-                settings.profilePhoto
-            );
-
-            settingsUpdateHeader(settings);
-            document.getElementById("settings-photo-input").value = "";
-        }
-
         function settingsLoad() {
-            const saved = settingsReadSaved();
-            const user = settingsReadCurrentUser();
-            const profileSettings =
-                user && saved.profileUserId === user.id ? saved : {};
-            const metadata = user || {};
-            const role = document.getElementById("settings-role");
-
-            settingsDefaults.name = metadata.name || metadata.email || settingsDefaults.name;
-            settingsDefaults.email = metadata.email || settingsDefaults.email;
-            settingsDefaults.role = metadata.role === "clinic_staff"
-                ? "Clinic Staff"
-                : settingsDefaults.role;
-            if (role) role.value = settingsDefaults.role;
-
+            currentSettingsUser = settingsReadCurrentUser();
+            const storedSettings = settingsReadSaved();
+            const saved = storedSettings.profileUserId &&
+                storedSettings.profileUserId !== currentSettingsUser?.id
+                ? {}
+                : storedSettings;
             const settings = {
-                ...settingsDefaults,
-
-                // Support settings saved by the earlier page version.
-                name: profileSettings.name ?? settingsDefaults.name,
-                email: profileSettings.email ?? settingsDefaults.email,
-                phone: saved.phone ?? settingsDefaults.phone,
+                profileUserId: currentSettingsUser?.id || "",
                 twoFactor: saved.twoFactor ?? settingsDefaults.twoFactor,
-                appointmentUpdates:
-                    saved.appointmentUpdates ?? settingsDefaults.appointmentUpdates,
-                patientInquiries:
-                    saved.patientInquiries ?? settingsDefaults.patientInquiries,
-                weeklySummary:
-                    saved.weeklySummary ?? settingsDefaults.weeklySummary,
                 language: saved.language ?? settingsDefaults.language,
                 dateFormat: saved.dateFormat ?? settingsDefaults.dateFormat,
                 timezone: saved.timezone ?? settingsDefaults.timezone,
-                profilePhoto:
-                    profileSettings.profilePhoto ??
-                    metadata.avatarUrl ??
-                    settingsDefaults.profilePhoto
+                sessionTimeoutMinutes:
+                    String(saved.sessionTimeoutMinutes ?? settingsDefaults.sessionTimeoutMinutes)
             };
 
-            pendingProfilePhoto = undefined;
-            settingsPopulateForm(settings);
+            document.getElementById("settings-two-factor").checked =
+                Boolean(settings.twoFactor);
+            document.getElementById("settings-language").value = settings.language;
+            document.getElementById("settings-date").value = settings.dateFormat;
+            document.getElementById("settings-timezone").value = settings.timezone;
+            document.getElementById("settings-session-timeout").value =
+                settings.sessionTimeoutMinutes;
             originalSettings = structuredClone(settings);
         }
 
-        function settingsSaveChanges() {
-            const settings = settingsGetCurrentForm();
+        function settingsPersonalSettingsAreDirty() {
+            return JSON.stringify(settingsGetPersonalSettings()) !==
+                JSON.stringify(originalSettings);
+        }
+
+        async function settingsCallAdminProfiles(body, operation) {
+            const { data, error } = await db.functions.invoke("admin-profiles", { body });
+            if (error) {
+                let message = error.message;
+                if (error.context && typeof error.context.json === "function") {
+                    try {
+                        const responseBody = await error.context.json();
+                        message = responseBody.error || message;
+                    } catch (responseError) {
+                        console.error("Could not read profile service error:", responseError);
+                    }
+                }
+                throw new Error(`Could not ${operation}: ${message}`);
+            }
+            return data;
+        }
+
+        function settingsShowProfileError(message) {
+            const errorElement = document.getElementById("settings-profile-error");
+            errorElement.textContent = message;
+            errorElement.classList.remove("hidden");
+        }
+
+        function settingsClearProfileError() {
+            const errorElement = document.getElementById("settings-profile-error");
+            errorElement.textContent = "";
+            errorElement.classList.add("hidden");
+        }
+
+        function settingsProfileFormValue() {
+            return {
+                full_name: document.getElementById("settings-name").value.trim(),
+                email: document.getElementById("settings-email").value.trim(),
+                role: document.getElementById("settings-role").value,
+                specialization:
+                    document.getElementById("settings-specialization").value.trim(),
+                status: document.getElementById("settings-status").value
+            };
+        }
+
+        function settingsProfileFormIsDirty() {
+            return selectedProfile &&
+                JSON.stringify(settingsProfileFormValue()) !==
+                    JSON.stringify({
+                        full_name: selectedProfile.full_name || "",
+                        email: selectedProfile.email || "",
+                        role: selectedProfile.role || "doctor",
+                        specialization: selectedProfile.specialization || "",
+                        status: selectedProfile.status || "active"
+                    });
+        }
+
+        function settingsPopulateProfile(profile) {
+            selectedProfile = profile;
+            originalProfile = profile ? structuredClone(profile) : null;
+
+            const fields = document.getElementById("settings-profile-fields");
+            const saveButton = document.getElementById("settings-save-button");
+            fields.hidden = !profile;
+            saveButton.disabled = !profile;
+            if (!profile) return;
+
+            document.getElementById("settings-name").value = profile.full_name || "";
+            document.getElementById("settings-email").value = profile.email || "";
+            document.getElementById("settings-role").value = profile.role || "doctor";
+            document.getElementById("settings-specialization").value =
+                profile.specialization || "";
+            document.getElementById("settings-status").value =
+                profile.status || "active";
+
+            const emailInput = document.getElementById("settings-email");
+            const isLinked = Boolean(profile.has_auth_account);
+            emailInput.disabled = !isLinked;
+            document.getElementById("settings-profile-link-note").textContent =
+                isLinked
+                    ? "Changing email updates the linked sign-in account."
+                    : "This staff record has no linked sign-in account, so its email cannot be changed here.";
+        }
+
+        async function settingsInitializeAdminProfiles() {
+            if (document.body.dataset.page !== "settings") return;
+
+            const profileSelect = document.getElementById("settings-profile-select");
+            settingsClearProfileError();
+            settingsReadCurrentUser();
+
+            try {
+                const data = await settingsCallAdminProfiles(
+                    { action: "list" },
+                    "load staff profiles"
+                );
+
+                managedProfiles = data.profiles || [];
+                profileSelect.replaceChildren();
+                managedProfiles.forEach(function (profile) {
+                    const option = document.createElement("option");
+                    option.value = String(profile.staff_id);
+                    option.textContent =
+                        `${profile.full_name || "Unnamed staff member"} (${profile.role})`;
+                    profileSelect.appendChild(option);
+                });
+
+                if (!managedProfiles.length) {
+                    profileSelect.add(new Option("No staff profiles found", ""));
+                    profileSelect.disabled = true;
+                    settingsPopulateProfile(null);
+                    settingsShowProfileError("No staff profiles were returned.");
+                    return;
+                }
+
+                const currentProfile = managedProfiles.find(profile =>
+                    String(profile.staff_id) === String(currentSettingsUser?.staffId)
+                );
+                const initialProfile = currentProfile || managedProfiles[0];
+                profileSelect.value = String(initialProfile.staff_id);
+                profileSelect.disabled = false;
+                settingsPopulateProfile(initialProfile);
+            } catch (error) {
+                console.error("Could not load staff profiles:", error);
+                profileSelect.replaceChildren(new Option("Could not load profiles", ""));
+                profileSelect.disabled = true;
+                settingsPopulateProfile(null);
+                settingsShowProfileError(
+                    error.message || "Could not load staff profiles. Please try again."
+                );
+            }
+        }
+
+        async function settingsSaveChanges() {
+            if (!selectedProfile) {
+                settingsShowProfileError("Select a staff profile before saving.");
+                return;
+            }
+
+            const profile = settingsProfileFormValue();
             const emailInput = document.getElementById("settings-email");
 
-            if (!settings.name) {
+            if (!profile.full_name) {
                 alert("Please enter your full name.");
                 document.getElementById("settings-name").focus();
                 return;
             }
 
-            if (!settings.email || !emailInput.checkValidity()) {
+            if (emailInput.disabled) {
+                profile.email = "";
+            } else if (!profile.email || !emailInput.checkValidity()) {
                 alert("Please enter a valid email address.");
                 emailInput.focus();
                 return;
             }
 
+            const saveButton = document.getElementById("settings-save-button");
+            const cancelButton = document.getElementById("settings-cancel-button");
+            const profileSelect = document.getElementById("settings-profile-select");
+            saveButton.disabled = true;
+            cancelButton.disabled = true;
+            profileSelect.disabled = true;
+            settingsClearProfileError();
+
             try {
-                localStorage.setItem(
-                    SETTINGS_STORAGE_KEY,
-                    JSON.stringify(settings)
+                const data = await settingsCallAdminProfiles(
+                    {
+                        action: "update",
+                        staffId: selectedProfile.staff_id,
+                        profile
+                    },
+                    "save staff profile"
                 );
 
-                // Also update the old key used by existing pages.
-                localStorage.setItem(
-                    "babydududocs_settings",
-                    JSON.stringify({
-                        ...settings,
-                        fullName: settings.name
-                    })
+                const updatedProfile = data.profile;
+                managedProfiles = managedProfiles.map(item =>
+                    String(item.staff_id) === String(updatedProfile.staff_id)
+                        ? updatedProfile
+                        : item
                 );
+                const selectedOption = Array.from(
+                    document.getElementById("settings-profile-select").options
+                ).find(option =>
+                    option.value === String(updatedProfile.staff_id)
+                );
+                if (selectedOption) {
+                    selectedOption.textContent =
+                        `${updatedProfile.full_name} (${updatedProfile.role})`;
+                }
+                settingsPopulateProfile(updatedProfile);
 
-                pendingProfilePhoto = undefined;
-                originalSettings = structuredClone(settings);
-                settingsPopulateForm(settings);
-                settingsShowToast("Settings saved successfully!");
+                if (
+                    currentSettingsUser &&
+                    String(updatedProfile.staff_id) === String(currentSettingsUser.staffId)
+                ) {
+                    currentSettingsUser.fullName = updatedProfile.full_name;
+                    currentSettingsUser.name = updatedProfile.full_name;
+                    currentSettingsUser.email = updatedProfile.email || currentSettingsUser.email;
+                    currentSettingsUser.role = updatedProfile.role;
+                    localStorage.setItem(
+                        CURRENT_USER_STORAGE_KEY,
+                        JSON.stringify(currentSettingsUser)
+                    );
+                    if (typeof renderCurrentUserProfile === "function") {
+                        renderCurrentUserProfile();
+                    }
+                }
+
+                const personalSettings = settingsGetPersonalSettings();
+                try {
+                    localStorage.setItem(
+                        SETTINGS_STORAGE_KEY,
+                        JSON.stringify(personalSettings)
+                    );
+                    originalSettings = structuredClone(personalSettings);
+                } catch (storageError) {
+                    console.error(
+                        "Profile saved, but personal settings could not be saved:",
+                        storageError
+                    );
+                    settingsShowToast(
+                        "Profile saved, but personal settings could not be saved."
+                    );
+                    return;
+                }
+
+                settingsShowToast("Staff profile saved successfully.");
             } catch (error) {
-                console.error("Could not save settings:", error);
-                alert("Could not save your settings. Your browser storage may be full.");
+                console.error("Could not save staff profile:", error);
+                settingsShowProfileError(
+                    error.message || "Could not save this staff profile."
+                );
+                settingsShowToast("Could not save this staff profile.");
+            } finally {
+                saveButton.disabled = !selectedProfile;
+                cancelButton.disabled = false;
+                profileSelect.disabled = !managedProfiles.length;
             }
         }
 
         function settingsCancelChanges() {
-            if (!originalSettings) {
-                settingsLoad();
-                return;
+            if (settingsProfileFormIsDirty() || settingsPersonalSettingsAreDirty()) {
+                if (!confirm("Discard your unsaved changes?")) return;
             }
 
-            if (confirm("Discard your unsaved changes?")) {
-                pendingProfilePhoto = undefined;
-                settingsPopulateForm(structuredClone(originalSettings));
-                settingsShowToast("Unsaved changes discarded.");
+            const profileSelect = document.getElementById("settings-profile-select");
+            if (selectedProfile) {
+                profileSelect.value = String(selectedProfile.staff_id);
+                settingsPopulateProfile(structuredClone(originalProfile));
             }
-        }
-
-        function settingsHandlePhotoChange(event) {
-            const file = event.target.files[0];
-
-            if (!file) return;
-
-            const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-
-            if (!allowedTypes.includes(file.type)) {
-                alert("Please choose a JPG, PNG, or WebP image.");
-                event.target.value = "";
-                return;
-            }
-
-            if (file.size > MAX_PHOTO_SIZE) {
-                alert("Your photo must be 2 MB or smaller.");
-                event.target.value = "";
-                return;
-            }
-
-            const reader = new FileReader();
-
-            reader.onload = function () {
-                pendingProfilePhoto = reader.result;
-
-                const name = document.getElementById("settings-name").value.trim()
-                    || settingsDefaults.name;
-
-                // Preview immediately; the photo is permanently saved when
-                // the user clicks Save changes.
-                settingsRenderAvatar(
-                    document.getElementById("settings-profile-avatar"),
-                    name,
-                    pendingProfilePhoto
-                );
-
-                settingsShowToast("Photo preview updated. Click Save changes to keep it.");
-            };
-
-            reader.onerror = function () {
-                alert("Could not read this image. Please try another photo.");
-                event.target.value = "";
-            };
-
-            reader.readAsDataURL(file);
+            settingsLoad();
+            settingsShowToast("Unsaved changes discarded.");
         }
 
         function settingsChangePassword() {
-            alert("Password changing is not connected to a password-management system yet.");
+            const form = document.getElementById("settings-password-form");
+            form.classList.remove("hidden");
+            document.getElementById("settings-password-error").classList.add("hidden");
+            document.getElementById("settings-new-password").focus();
         }
 
-        document.getElementById("settings-photo-input")
-            .addEventListener("change", settingsHandlePhotoChange);
+        function settingsCancelPasswordChange() {
+            const form = document.getElementById("settings-password-form");
+            if (document.getElementById("settings-password-submit").disabled) return;
+
+            form.reset();
+            form.classList.add("hidden");
+            document.getElementById("settings-password-error").classList.add("hidden");
+        }
+
+        async function settingsSubmitPasswordChange(event) {
+            event.preventDefault();
+
+            const passwordInput = document.getElementById("settings-new-password");
+            const confirmInput = document.getElementById("settings-confirm-password");
+            const errorElement = document.getElementById("settings-password-error");
+            const submitButton = document.getElementById("settings-password-submit");
+            const newPassword = passwordInput.value;
+
+            errorElement.textContent = "";
+            errorElement.classList.add("hidden");
+
+            if (newPassword !== confirmInput.value) {
+                errorElement.textContent = "The passwords do not match.";
+                errorElement.classList.remove("hidden");
+                confirmInput.focus();
+                return;
+            }
+
+            submitButton.disabled = true;
+            document.getElementById("settings-password-cancel").disabled = true;
+            submitButton.textContent = "Updating...";
+
+            try {
+                const { error } = await db.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+
+                document.getElementById("settings-password-form").reset();
+                document.getElementById("settings-password-form").classList.add("hidden");
+                settingsShowToast("Password updated successfully.");
+            } catch (error) {
+                errorElement.textContent =
+                    error.message || "Could not update your password. Please try again.";
+                errorElement.classList.remove("hidden");
+            } finally {
+                submitButton.disabled = false;
+                document.getElementById("settings-password-cancel").disabled = false;
+                submitButton.textContent = "Update password";
+            }
+        }
 
         document.addEventListener("DOMContentLoaded", function () {
             settingsLoad();
+
+            document.getElementById("settings-profile-select")
+                .addEventListener("change", function (event) {
+                    if (settingsProfileFormIsDirty()) {
+                        if (!confirm("Discard changes to this profile?")) {
+                            event.target.value = String(selectedProfile.staff_id);
+                            return;
+                        }
+                    }
+                    const profile = managedProfiles.find(item =>
+                        String(item.staff_id) === event.target.value
+                    );
+                    settingsClearProfileError();
+                    settingsPopulateProfile(profile || null);
+                });
 
             if (window.lucide) {
                 lucide.createIcons();
