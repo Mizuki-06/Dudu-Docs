@@ -554,6 +554,33 @@
                     Make sure both passwords match.
                 </p>
 
+                <div id="recoveryMfaPanel" hidden>
+                    <p class="form-subtitle">
+                        Verify your identity with the six-digit code from your
+                        authenticator app before changing your password.
+                    </p>
+                    <form id="recoveryMfaForm" class="login-form">
+                        <div class="input-group">
+                            <label for="recoveryMfaCode" class="input-label">
+                                Authenticator code
+                            </label>
+                            <input id="recoveryMfaCode"
+                                   type="text"
+                                   class="text-input"
+                                   inputmode="numeric"
+                                   autocomplete="one-time-code"
+                                   pattern="[0-9]{6}"
+                                   maxlength="6"
+                                   required>
+                        </div>
+                        <button type="submit"
+                                id="recoveryMfaVerifyButton"
+                                class="submit-btn">
+                            Verify code
+                        </button>
+                    </form>
+                </div>
+
                 <form id="resetForm" class="login-form">
 
                     <div class="input-group">
@@ -658,11 +685,16 @@
         const mfaChallengePanel = document.getElementById("mfaChallengePanel");
         const mfaChallengeForm = document.getElementById("mfaChallengeForm");
         const mfaCode = document.getElementById("mfaCode");
+        const recoveryMfaPanel = document.getElementById("recoveryMfaPanel");
+        const recoveryMfaForm = document.getElementById("recoveryMfaForm");
+        const recoveryMfaCode = document.getElementById("recoveryMfaCode");
         const forgotForm = document.getElementById("forgotForm");
         const resetForm = document.getElementById("resetForm");
 
         const loginButton = document.getElementById("loginButton");
         const mfaVerifyButton = document.getElementById("mfaVerifyButton");
+        const recoveryMfaVerifyButton =
+            document.getElementById("recoveryMfaVerifyButton");
         const forgotButton = document.getElementById("forgotButton");
         const resetButton = document.getElementById("resetButton");
 
@@ -678,6 +710,8 @@
         // establishes a valid password recovery session.
         let recoveryVerified = false;
         let recoveryInProgress = false;
+        let recoveryMfaFactorId = null;
+        let recoverySetupPromise = null;
         let pendingMfaUser = null;
         let pendingMfaFactorId = null;
         let pendingMfaEmail = "";
@@ -708,8 +742,12 @@
         function showLogin() {
             recoveryVerified = false;
             recoveryInProgress = false;
+            recoveryMfaFactorId = null;
             resetButton.disabled = true;
             resetForm.reset();
+            resetForm.hidden = false;
+            recoveryMfaPanel.hidden = true;
+            recoveryMfaForm.reset();
             loginForm.hidden = false;
             mfaChallengePanel.hidden = true;
             mfaChallengeForm.reset();
@@ -1132,16 +1170,7 @@
             );
         }
 
-        function enablePasswordReset() {
-            recoveryInProgress = true;
-            recoveryVerified = true;
-            resetButton.disabled = false;
-            resetButton.textContent = "Update Password";
-
-            showSection(resetSection);
-            clearMessage(resetMessage);
-
-            // Remove recovery tokens from the address bar.
+        function clearRecoveryParameters() {
             window.history.replaceState(
                 {},
                 document.title,
@@ -1149,12 +1178,137 @@
             );
         }
 
+        async function enablePasswordReset() {
+            if (recoveryVerified || recoveryMfaFactorId) return;
+            if (recoverySetupPromise) return recoverySetupPromise;
+
+            recoverySetupPromise = (async () => {
+                recoveryInProgress = true;
+                resetForm.hidden = true;
+                recoveryMfaPanel.hidden = true;
+                resetButton.disabled = true;
+                resetButton.textContent = "Verifying Reset Link...";
+                showSection(resetSection);
+                showMessage(
+                    resetMessage,
+                    "Verifying your sign-in security level...",
+                    "info"
+                );
+
+                try {
+                    const { data: assurance, error: assuranceError } =
+                        await db.auth.mfa.getAuthenticatorAssuranceLevel();
+                    if (assuranceError) throw assuranceError;
+
+                    if (
+                        assurance.currentLevel === "aal2" ||
+                        assurance.nextLevel !== "aal2"
+                    ) {
+                        recoveryVerified = true;
+                        resetForm.hidden = false;
+                        resetButton.disabled = false;
+                        resetButton.textContent = "Update Password";
+                        clearMessage(resetMessage);
+                        clearRecoveryParameters();
+                        return;
+                    }
+
+                    const { data, error } = await db.auth.mfa.listFactors();
+                    if (error) throw error;
+
+                    const factor = (data.totp || []).find(
+                        item => item.status === "verified"
+                    );
+                    if (!factor) {
+                        throw new Error(
+                            "An authenticator app is required to update this password. Contact an administrator."
+                        );
+                    }
+
+                    recoveryMfaFactorId = factor.id;
+                    recoveryMfaPanel.hidden = false;
+                    recoveryMfaCode.value = "";
+                    showMessage(
+                        resetMessage,
+                        "A second verification step is required to update your password.",
+                        "info"
+                    );
+                    recoveryMfaCode.focus();
+                } catch (error) {
+                    showRecoveryError(
+                        error.message || "Could not verify your sign-in security level."
+                    );
+                }
+            })();
+
+            try {
+                await recoverySetupPromise;
+            } finally {
+                recoverySetupPromise = null;
+            }
+        }
+
+        async function handleRecoveryMfaVerification(event) {
+            event.preventDefault();
+            if (!recoveryMfaFactorId) return;
+
+            recoveryMfaVerifyButton.disabled = true;
+            recoveryMfaVerifyButton.textContent = "Verifying...";
+
+            try {
+                const { data: challenge, error: challengeError } =
+                    await db.auth.mfa.challenge({
+                        factorId: recoveryMfaFactorId
+                    });
+                if (challengeError) throw challengeError;
+
+                const { error: verifyError } = await db.auth.mfa.verify({
+                    factorId: recoveryMfaFactorId,
+                    challengeId: challenge.id,
+                    code: recoveryMfaCode.value.trim()
+                });
+                if (verifyError) throw verifyError;
+
+                const { data: assurance, error: assuranceError } =
+                    await db.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (assuranceError) throw assuranceError;
+                if (assurance.currentLevel !== "aal2") {
+                    throw new Error(
+                        "Your session could not be upgraded. Please try the latest authenticator code."
+                    );
+                }
+
+                recoveryMfaFactorId = null;
+                recoveryVerified = true;
+                recoveryMfaPanel.hidden = true;
+                recoveryMfaForm.reset();
+                resetForm.hidden = false;
+                resetButton.disabled = false;
+                resetButton.textContent = "Update Password";
+                clearMessage(resetMessage);
+                clearRecoveryParameters();
+                newPassword.focus();
+            } catch (error) {
+                showMessage(
+                    resetMessage,
+                    error.message || "The code could not be verified. Try again.",
+                    "error"
+                );
+            } finally {
+                recoveryMfaVerifyButton.disabled = false;
+                recoveryMfaVerifyButton.textContent = "Verify code";
+            }
+        }
+
         function showRecoveryError(message) {
             recoveryVerified = false;
             recoveryInProgress = true;
+            recoveryMfaFactorId = null;
 
             resetButton.disabled = true;
             resetButton.textContent = "Update Password";
+            resetForm.hidden = true;
+            recoveryMfaPanel.hidden = true;
 
             showSection(resetSection);
 
@@ -1170,9 +1324,14 @@
         // is processed and the recovery session is established.
         db.auth.onAuthStateChange((event, session) => {
             if (event === "PASSWORD_RECOVERY" && session) {
-                enablePasswordReset();
+                void enablePasswordReset();
             }
         });
+
+        recoveryMfaForm.addEventListener(
+            "submit",
+            handleRecoveryMfaVerification
+        );
 
         // =====================================
         // VERIFY RECOVERY LINK
